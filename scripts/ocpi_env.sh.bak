@@ -1,0 +1,8 @@
+
+export BASE=/home/mpepe/projects/opencpi
+
+export OCPI_BASE="$BASE"/opencpi
+export CPIDIR="$OCPI_BASE"
+
+export OCPI_DIR="$OCPI_BASE"/ocpi
+

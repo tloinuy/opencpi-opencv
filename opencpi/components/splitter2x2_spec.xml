@@ -1,0 +1,18 @@
+  <ComponentSpec Name="splitter2x2">
+    <Properties >
+      <Property Name="reserved0" Readable="true" Writable="false" Type="ULong"/>
+      <Property Name="splitCtrl" Readable="true" Writable="true" Type="ULong"/>
+    </Properties>
+    <DataInterfaceSpec Name="in0" Producer="false">
+      <ProtocolSummary DataValueWidth="16" MaxMessageValues="4096" NumberOfOpcodes="256" VariableMessageLength="true" ZeroLengthMessages="true"/>
+    </DataInterfaceSpec>
+    <DataInterfaceSpec Name="in1" Producer="false" Optional="true">
+      <ProtocolSummary DataValueWidth="16" MaxMessageValues="4096" NumberOfOpcodes="256" VariableMessageLength="true" ZeroLengthMessages="true"/>
+    </DataInterfaceSpec>
+    <DataInterfaceSpec Name="out0" Producer="true">
+      <ProtocolSummary DataValueWidth="16" MaxMessageValues="4096" NumberOfOpcodes="256" VariableMessageLength="true" ZeroLengthMessages="true"/>
+    </DataInterfaceSpec>
+    <DataInterfaceSpec Name="out1" Producer="true" Optional="true">
+      <ProtocolSummary DataValueWidth="16" MaxMessageValues="4096" NumberOfOpcodes="256" VariableMessageLength="true" ZeroLengthMessages="true"/>
+    </DataInterfaceSpec>
+  </ComponentSpec>
