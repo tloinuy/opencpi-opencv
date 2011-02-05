@@ -15,10 +15,20 @@
 #include "highgui.h"
 #include "cv.h"
 
+// PValues for Sobel worker
+OCPI::Util::PValue out_pvlist[] = {
+	OCPI::Util::PVULong("bufferCount", 3),
+	OCPI::Util::PVString("xferRole", "active"),
+	OCPI::Util::PVULong("bufferSize", 0x4000),
+	OCPI::Util::PVEnd
+};
+
 int main ( int argc, char* argv [ ] )
 {
 	if(argc != 2) {
-		printf("Usage: ./canny_edge_detector <image name>\n");
+		std::cout << std::endl
+			<< "Usage: ./canny_edge_detector <image name>\n"
+			<< std::endl;
 		return 0;
 	}
 
@@ -27,37 +37,67 @@ int main ( int argc, char* argv [ ] )
 		( void ) argc;
 		( void ) argv;
 
-		std::vector<Demo::WorkerFacade*> facades;
-		// Holds facades for group operations
+		/* ---- Load the image from file (grayscale) -------------- */
+		IplImage* img = cvLoadImage( argv[1], 0 );
+		cvNamedWindow( "Input", CV_WINDOW_AUTOSIZE );
+		cvShowImage( "Input", img );
+		/*
+		cvWaitKey(0);
+		return 0;
+		*/
+		// TODO - convert to 8U pixel depth (default image already is)
 
-		std::vector<OCPI::Container::Interface*> interfaces;
-		// Holds RCC worker interfaces passed to the RCC dispatch thread
+		// Create an image for the output (grayscale)
+		IplImage* outImg = cvLoadImage( argv[1], 0 );
+		cvNamedWindow( "Output", CV_WINDOW_AUTOSIZE );
+		// TODO - create this image from scratch
+
+		// Run Canny edge detection
+		/*
+		cvCanny( outImg, outImg, 10, 100, 3 );
+		cvShowImage( "Output", outImg );
+		*/
 
 		/* ---- Create the shared RCC container and application -------------- */
-
 		OCPI::Container::Interface* rcc_container ( Demo::get_rcc_interface ( ) );
 
+		// Holds RCC worker interfaces passed to the RCC dispatch thread
+		std::vector<OCPI::Container::Interface*> interfaces;
 		interfaces.push_back ( rcc_container );
 
 		OCPI::Container::Application*
 			rcc_application ( rcc_container->createApplication ( ) );
 
-		/* ---- Create the copy worker --------------------------------- */
+		// Holds facades for group operations
+		std::vector<Demo::WorkerFacade*> facades;
 
-		Demo::WorkerFacade copy ( "Copy (RCC)",
+		/* ---- Create the sobel worker --------------------------------- */
+		Demo::WorkerFacade sobel ( "Sobel (RCC)",
 				rcc_application,
-				Demo::get_rcc_uri ( "copy" ).c_str ( ),
-				"copy" );
+				Demo::get_rcc_uri ( "sobel" ).c_str ( ),
+				"sobel" );
 
-		facades.push_back ( &copy );
+		// Set properties
+		OCPI::Util::PValue worker_pvlist[] = {
+			OCPI::Util::PVULong("height", img->height),
+			OCPI::Util::PVULong("width", img->width),
+			OCPI::Util::PVEnd
+		};
+		sobel.set_properties(worker_pvlist);
 
-		OCPI::Container::ExternalPort &myOut = 
-			copy.port("in").connectExternal("aci_out");
-		OCPI::Container::ExternalPort &myIn = 
-			copy.port("out").connectExternal("aci_in");
+		facades.push_back ( &sobel );
+
+		// Set ports
+		OCPI::Container::Port
+			&wOut = sobel.port("out"),
+			&wIn = sobel.port("in");
+
+		// Set external ports (need 3 buffers for out)
+		OCPI::Container::ExternalPort
+			&myOut = wIn.connectExternal("aci_out", out_pvlist),
+			&myIn = wOut.connectExternal("aci_in");
 
 		/* ---- Start all of the workers ------------------------------------- */
-
 		std::for_each ( facades.rbegin ( ),
 				facades.rend ( ),
 				Demo::start );
@@ -68,59 +108,74 @@ int main ( int argc, char* argv [ ] )
 				interfaces.end(),
 				Demo::dispatch );
 
+		// Output info
 		uint8_t *odata;
 		uint32_t olength;
 
-		OCPI::Container::ExternalBuffer* myOutput = myOut.getBuffer(odata,olength);
-		std::cout << "My output buffer is size " << olength << std::endl;
-
-		// ---> Adding the data!
-		strcpy((char*)odata,"hello world");
-
-		myOutput->put(0, strlen("hello world") + 1, false);
-
-		// TODO - add image data
-		// TODO - how to use a stream? buffer size of 2048 is too small for images
-		IplImage* img = cvLoadImage( argv[1] );
-		cvNamedWindow( "Input", CV_WINDOW_AUTOSIZE );
-		cvShowImage( "Input", img );
-
-		// Create an image for the output (grayscale)
-		IplImage* out = cvLoadImage( argv[1], 0 );
-		cvNamedWindow( "Output", CV_WINDOW_AUTOSIZE );
-
-		// Run Canny edge detection
-		cvCanny( out, out, 10, 100, 3 );
-		cvShowImage( "Output", out );
-
-		// ---> End
-
-		// Call dispatch so the worker can "act" on its input data
-		std::for_each ( interfaces.begin(),
-				interfaces.end(),
-				Demo::dispatch );
-
+		// Input info
 		uint8_t *idata;
 		uint32_t ilength;
 		uint8_t opcode = 0;
 		bool isEndOfData = false;
 
-		// ---> Get the data!
+		// Current line
+		uint8_t *imgLine = (uint8_t *) img->imageData;
+		uint8_t *outImgLine = (uint8_t *) outImg->imageData;
 
-		// TODO - retrieve image data
-		OCPI::Container::ExternalBuffer* myInput = myIn.getBuffer(opcode,idata,
-				ilength,isEndOfData);
-		std::cout << "My input buffer is size " << ilength << std::endl;
+		for(int i = 0; i < img->height; i++) {
+			// std::cout << "Starting line..." << std::endl;
 
-		std::cout << "The contents of the input buffer is " << (char*)idata << 
-			std::endl;
+			// Set output data
+			OCPI::Container::ExternalBuffer* myOutput = myOut.getBuffer(odata, olength);
+			// printf("odata: %x\n", odata);
+			memcpy(odata, imgLine, img->widthStep);
+			imgLine += img->widthStep;
+			myOutput->put(0, img->widthStep, false);
+
+			std::cout << "My output buffer is size " << olength << std::endl;
+
+			// Call dispatch so the worker can "act" on its input data
+			std::for_each ( interfaces.begin(),
+					interfaces.end(),
+					Demo::dispatch );
+
+			// std::cout << "Done working..." << std::endl;
+
+			// Don't get result on first line
+			if(i == 0)
+				continue;
+
+			// Get input data
+			OCPI::Container::ExternalBuffer* myInput = myIn.getBuffer(opcode, idata,
+				ilength, isEndOfData);
+
+			std::cout << "My input buffer is size " << ilength << std::endl;
+			std::cout << "The contents of the input buffer is ";
+			if(idata == NULL) {
+				std::cout << "[NULL]";
+			}
+			else {
+				// Sanity check
+				for(int j = 0; j < 10; j++)
+					std::cout << (int) idata[j] << " ";
+			}
+			std::cout << std::endl;
+
+			myInput->release();
+			memcpy(outImgLine, idata, img->widthStep);
+			outImgLine += img->widthStep;
+		}
+		// TODO - last line?
+
+		// Show image
+		cvShowImage( "Output", outImg );
 
 		std::cout << "\nOpenOCPI application is done\n" << std::endl;
 
 		// Cleanup
 		cvWaitKey(0);
 		cvReleaseImage( &img );
-		cvReleaseImage( &out );
+		cvReleaseImage( &outImg );
 		cvDestroyWindow( "Input" );
 		cvDestroyWindow( "Output" );
 	}
@@ -131,11 +186,11 @@ int main ( int argc, char* argv [ ] )
 	catch ( const OCPI::Container::ApiError& a )
 	{
 		std::cerr << "\nException(a): rc="
-									  << a.getErrorCode ( )
-														   << " : "
-																   << a.getAuxInfo ( )
-              << "\n"
-              << std::endl;
+							<< a.getErrorCode ( )
+							<< " : "
+							<< a.getAuxInfo ( )
+							<< "\n"
+							<< std::endl;
   }
   catch ( const OCPI::Util::EmbeddedException& e )
   {

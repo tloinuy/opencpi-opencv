@@ -37,7 +37,10 @@ namespace Demo
        << worker_name
        << ".so";
 #elif defined ( __x86_64__ )
-    ss << "/home/tonyliu/Desktop/opencpi-opencv/opencpi/components/copy.rcc/target-linux-x86_64/"
+		// modified to handle all available RCC workers
+    ss << "/home/tonyliu/Desktop/opencpi-opencv/opencpi/components/"
+			 << worker_name << ".rcc"
+			 << "/target-linux-x86_64/"
        << worker_name
        << ".so";
 #elif defined ( __i386__ ) || ( __i686__ )

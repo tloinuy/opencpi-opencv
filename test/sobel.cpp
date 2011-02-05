@@ -54,9 +54,22 @@ int main( int argc, char** argv ) {
 		}
 	}
 
-	// work on top and bottom
-	
-	// work on left and right
+	// work on left and right edges (not accurate)
+	for(int i = 0; i < H; i++) {
+		dstdata[ind(i,0)] = 0;
+		dstdata[ind(i,W-1)] = 0;
+	}
+
+	// work on top and bottom edges (not accurate)
+	for(int j = 0; j < W; j++) {
+		dstdata[ind(0,j)] = 0;
+		dstdata[ind(H-1,j)] = 0;
+	}
+
+	// debugging
+	for(int j = 0; j < 10; j++)
+		printf("%d ", dstdata[ind(1, j)]);
+	printf("\n");
 
 #undef ind
 
