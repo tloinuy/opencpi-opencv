@@ -51,7 +51,6 @@ Implementations = \
 	morph_mean.rcc \
 	psd.hdl \
 	sma.hdl \
-	sobel.rcc \
 	split1x2.rcc \
 	splitter2x2.hdl \
 	splitter2x2.rcc \

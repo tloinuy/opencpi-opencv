@@ -31,9 +31,9 @@ RCCDispatch sobel = {
   SOBEL_DISPATCH
 };
 
-// Compute one line of output
-static void
-doLine(Pixel *l0, Pixel *l1, Pixel *l2, Pixel *out, unsigned width) {
+// X derivative
+inline static void
+doLineX(Pixel *l0, Pixel *l1, Pixel *l2, Pixel *out, unsigned width) {
   unsigned i; // don't depend on c99 yet
   for (i = 1; i < width - 1; i++) {
     PixelTemp t =
@@ -41,10 +41,32 @@ doLine(Pixel *l0, Pixel *l1, Pixel *l2, Pixel *out, unsigned width) {
       -2 * l1[i-1] + 2 * l1[i+1] +
       -1 * l2[i-1] + 1 * l2[i+1];
     out[i] = t < 0 ? 0 : (t > MAX ? MAX : t);
-  }    
+  }
   out[0] = out[width-1] = 0; // boundary conditions
 }
 
+// Y derivative
+inline static void
+doLineY(Pixel *l0, Pixel *l1, Pixel *l2, Pixel *out, unsigned width) {
+  unsigned i; // don't depend on c99 yet
+  for (i = 1; i < width - 1; i++) {
+    PixelTemp t =
+      -1 * l0[i-1] + 1 * l2[i-1] +
+      -2 * l0[i]   + 2 * l2[i]   +
+      -1 * l0[i+1] + 1 * l2[i+1];
+    out[i] = t < 0 ? 0 : (t > MAX ? MAX : t);
+  }
+  out[0] = out[width-1] = 0; // boundary conditions
+}
+
+// Compute one line of output
+inline void
+doLine(Pixel *l0, Pixel *l1, Pixel *l2, Pixel *out, unsigned width, unsigned xderiv) {
+	if(xderiv)
+		doLineX(l0, l1, l2, out, width);
+	else
+		doLineY(l0, l1, l2, out, width);
+}
 
 // A run condition for flushing zero-length message
 // Basically we only wait for an output buffer, not an input
@@ -65,9 +87,6 @@ run(RCCWorker *self, RCCBoolean timedOut, RCCBoolean *newRunCondition) {
   const RCCContainer *c = self->container;
   
   (void)timedOut;
-
-	// DEBUG
-	// printf("s->inLine: %d\n", s->inLine);
 
   // End state:  just send the zero length message to indicate "done"
   // This will be unnecessary when EOS indication is fixed
@@ -93,14 +112,14 @@ run(RCCWorker *self, RCCBoolean timedOut, RCCBoolean *newRunCondition) {
 			s->buffers[(cur - 1 + HISTORY_SIZE) % HISTORY_SIZE].data,
 			in->current.data,
 			out->current.data,
-			p->width);
+			p->width,
+			p->xderiv);
     out->output.length = LINE_BYTES;
 		c->advance(out, LINE_BYTES);
 	}
 
 	// Go to next
 	unsigned prev = (cur - 2 + HISTORY_SIZE) % HISTORY_SIZE;
-	// printf("cur: %d, prev: %d\n", cur, prev);
 	if(s->inLine < HISTORY_SIZE - 1)
 		c->take(in, NULL, &s->buffers[cur]);
 	else

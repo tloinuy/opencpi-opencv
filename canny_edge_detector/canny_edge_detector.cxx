@@ -17,7 +17,7 @@
 
 // PValues for Sobel worker
 OCPI::Util::PValue out_pvlist[] = {
-	OCPI::Util::PVULong("bufferCount", 3),
+	OCPI::Util::PVULong("bufferCount", 1),
 	OCPI::Util::PVString("xferRole", "active"),
 	OCPI::Util::PVULong("bufferSize", 0x4000),
 	OCPI::Util::PVEnd
@@ -72,25 +72,45 @@ int main ( int argc, char* argv [ ] )
 		std::vector<Demo::WorkerFacade*> facades;
 
 		/* ---- Create the sobel worker --------------------------------- */
-		Demo::WorkerFacade sobel ( "Sobel (RCC)",
+		Demo::WorkerFacade xSobel ( "Sobel (RCC)",
+				rcc_application,
+				Demo::get_rcc_uri ( "sobel" ).c_str ( ),
+				"sobel" );
+		Demo::WorkerFacade ySobel ( "Sobel (RCC)",
 				rcc_application,
 				Demo::get_rcc_uri ( "sobel" ).c_str ( ),
 				"sobel" );
 
 		// Set properties
-		OCPI::Util::PValue worker_pvlist[] = {
+		OCPI::Util::PValue xWorker_pvlist[] = {
 			OCPI::Util::PVULong("height", img->height),
 			OCPI::Util::PVULong("width", img->width),
+			OCPI::Util::PVULong("xderiv", 1),
 			OCPI::Util::PVEnd
 		};
-		sobel.set_properties(worker_pvlist);
+		xSobel.set_properties(xWorker_pvlist);
+		facades.push_back ( &xSobel );
 
-		facades.push_back ( &sobel );
+		OCPI::Util::PValue yWorker_pvlist[] = {
+			OCPI::Util::PVULong("height", img->height),
+			OCPI::Util::PVULong("width", img->width),
+			OCPI::Util::PVULong("xderiv", 0),
+			OCPI::Util::PVEnd
+		};
+		ySobel.set_properties(yWorker_pvlist);
+		// facades.push_back ( &ySobel );
 
 		// Set ports
 		OCPI::Container::Port
-			&wOut = sobel.port("out"),
-			&wIn = sobel.port("in");
+			&wOut = xSobel.port("out"),
+			&wIn = xSobel.port("in");
+
+		// Pass input to xSobel first
+		// Output of xSobel feeds into ySobel
+		// Output of ySobel goes to application
+		// TODO - corner cases (doesn't quite work)
+		// wOut.connect( ySobel.port("in") );
+		// wIn.connect( xSobel.port("out") );
 
 		// Set external ports (need 3 buffers for out)
 		OCPI::Container::ExternalPort
