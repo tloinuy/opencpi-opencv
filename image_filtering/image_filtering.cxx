@@ -15,7 +15,7 @@
 #include "highgui.h"
 #include "cv.h"
 
-// PValues for Sobel worker
+// PValues for worker
 OCPI::Util::PValue out_pvlist[] = {
 	OCPI::Util::PVULong("bufferCount", 1),
 	OCPI::Util::PVString("xferRole", "active"),
@@ -27,7 +27,7 @@ int main ( int argc, char* argv [ ] )
 {
 	if(argc != 2) {
 		std::cout << std::endl
-			<< "Usage: ./canny_edge_detector <image name>\n"
+			<< "Usage: ./image_filtering <image name>\n"
 			<< std::endl;
 		return 0;
 	}
@@ -38,19 +38,36 @@ int main ( int argc, char* argv [ ] )
 		( void ) argv;
 
 		/* ---- Load the image from file (grayscale) -------------- */
-		IplImage* img = cvLoadImage( argv[1], 0 );
+		IplImage* inImg = cvLoadImage( argv[1], 0 );
+		// Create image with 8U pixel depth, single color channel
+		IplImage* img = cvCreateImage(
+				cvSize(inImg->width, inImg->height),
+				IPL_DEPTH_8U, 1
+		);
+		// Convert
+		cvConvertScale(inImg, img);
 		cvNamedWindow( "Input", CV_WINDOW_AUTOSIZE );
 		cvShowImage( "Input", img );
 		/*
 		cvWaitKey(0);
 		return 0;
 		*/
-		// TODO - convert to 8U pixel depth (default image already is)
+		/*
+		// Save smaller version
+		IplImage* smallImg = cvCreateImage(
+				cvSize(img->width / 2, img->height / 2),
+				img->depth, img->nChannels
+		);
+		cvResize(img, smallImg);
+		cvSaveImage("boston_small.jpg", smallImg);
+		*/
 
 		// Create an image for the output (grayscale)
-		IplImage* outImg = cvLoadImage( argv[1], 0 );
+		IplImage* outImg = cvCreateImage(
+				cvSize(img->width, img->height),
+				img->depth, img->nChannels
+		);
 		cvNamedWindow( "Output", CV_WINDOW_AUTOSIZE );
-		// TODO - create this image from scratch
 
 		// Run Canny edge detection
 		/*
@@ -71,26 +88,29 @@ int main ( int argc, char* argv [ ] )
 		// Holds facades for group operations
 		std::vector<Demo::WorkerFacade*> facades;
 
-		/* ---- Create the sobel worker --------------------------------- */
-		Demo::WorkerFacade xSobel ( "Sobel (RCC)",
+		/* ---- Create the worker --------------------------------- */
+		Demo::WorkerFacade worker ( "Sobel (RCC)",
 				rcc_application,
 				Demo::get_rcc_uri ( "sobel" ).c_str ( ),
 				"sobel" );
+		/*
 		Demo::WorkerFacade ySobel ( "Sobel (RCC)",
 				rcc_application,
 				Demo::get_rcc_uri ( "sobel" ).c_str ( ),
 				"sobel" );
+		*/
 
 		// Set properties
-		OCPI::Util::PValue xWorker_pvlist[] = {
+		OCPI::Util::PValue worker_pvlist[] = {
 			OCPI::Util::PVULong("height", img->height),
 			OCPI::Util::PVULong("width", img->width),
-			OCPI::Util::PVULong("xderiv", 1),
+			//OCPI::Util::PVULong("xderiv", 1),
 			OCPI::Util::PVEnd
 		};
-		xSobel.set_properties(xWorker_pvlist);
-		facades.push_back ( &xSobel );
+		worker.set_properties(worker_pvlist);
+		facades.push_back ( &worker );
 
+		/*
 		OCPI::Util::PValue yWorker_pvlist[] = {
 			OCPI::Util::PVULong("height", img->height),
 			OCPI::Util::PVULong("width", img->width),
@@ -98,12 +118,13 @@ int main ( int argc, char* argv [ ] )
 			OCPI::Util::PVEnd
 		};
 		ySobel.set_properties(yWorker_pvlist);
+		*/
 		// facades.push_back ( &ySobel );
 
 		// Set ports
 		OCPI::Container::Port
-			&wOut = xSobel.port("out"),
-			&wIn = xSobel.port("in");
+			&wOut = worker.port("out"),
+			&wIn = worker.port("in");
 
 		// Pass input to xSobel first
 		// Output of xSobel feeds into ySobel
@@ -191,6 +212,9 @@ int main ( int argc, char* argv [ ] )
 		cvShowImage( "Output", outImg );
 
 		std::cout << "\nOpenOCPI application is done\n" << std::endl;
+
+		// Save image
+		cvSaveImage("output_image.jpg", outImg);
 
 		// Cleanup
 		cvWaitKey(0);
