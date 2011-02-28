@@ -17,7 +17,7 @@
 
 // PValues for worker
 OCPI::Util::PValue out_pvlist[] = {
-	OCPI::Util::PVULong("bufferCount", 1),
+	OCPI::Util::PVULong("bufferCount", 2),
 	OCPI::Util::PVString("xferRole", "active"),
 	OCPI::Util::PVULong("bufferSize", 0x4000),
 	OCPI::Util::PVEnd
@@ -32,9 +32,8 @@ int main ( int argc, char* argv [ ] )
 		return 0;
 	}
 	char* worker_name = argv[2];
-	char worker_name_full[20];
-	strcpy(worker_name_full, worker_name);
-	strcat(worker_name_full, " (RCC)");
+	//strcpy(worker_name_full, worker_name);
+	//strcat(worker_name_full, " (RCC)");
 
 	try
 	{
@@ -93,7 +92,7 @@ int main ( int argc, char* argv [ ] )
 		std::vector<Demo::WorkerFacade*> facades;
 
 		/* ---- Create the worker --------------------------------- */
-		Demo::WorkerFacade worker ( worker_name_full,
+		Demo::WorkerFacade worker ( worker_name,//_full,
 				rcc_application,
 				Demo::get_rcc_uri ( worker_name ).c_str ( ),
 				worker_name );
@@ -108,7 +107,8 @@ int main ( int argc, char* argv [ ] )
 		OCPI::Util::PValue worker_pvlist[] = {
 			OCPI::Util::PVULong("height", img->height),
 			OCPI::Util::PVULong("width", img->width),
-			//OCPI::Util::PVULong("xderiv", 1), // Sobel only
+			//OCPI::Util::PVULong("xderiv", 1), // Sobel/Scharr only
+      //OCPI::Util::PVULong("normalize", 1), // Blur only
 			OCPI::Util::PVEnd
 		};
 		worker.set_properties(worker_pvlist);
