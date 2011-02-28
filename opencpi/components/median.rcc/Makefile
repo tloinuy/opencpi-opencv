@@ -34,49 +34,7 @@
 #
 ########################################################################### #
 
-OCPI_CDK_DIR=../ocpi
-
-Implementations = \
-	adc.rcc \
-	adc_unpack.rcc \
-	bias.hdl \
-	convert_s16_f32.rcc \
-	copy.rcc \
-	dac.rcc \
-	ddc.hdl \
-	delay.hdl \
-	delay.rcc \
-	framegate.hdl \
-	framegate.rcc \
-	morph_mean.rcc \
-	psd.hdl \
-	sma.hdl \
-	split1x2.rcc \
-	splitter2x2.hdl \
-	splitter2x2.rcc \
-	testmulti.rcc \
-	testzc.rcc \
-	sobel.rcc \
-	scharr.rcc \
-	laplace.rcc \
-	dilate.rcc \
-	erode.rcc \
-	blur.rcc \
-	median.rcc \
-#	gaussian.rcc \
-#	bilateral.rcc \
-#	pyr_up.rcc \
-#	pyr_down.rcc
-
-#	wbr.hdl 
-
-HdlTargets=xc5vsx95t-2-ff1136 xc5vlx50t-1-ff1136 xc6vlx240t-1-ff1156 
-#  xc5vlx330t-2-ff1738
-
-ifndef OCPI_RUNTIME_HOST
-RccTargets=$(HostTarget)
-else
-RccTargets=$(OCPI_RUNTIME_HOST)
-endif
-
-include $(OCPI_CDK_DIR)/include/lib.mk
+OCPI_CDK_DIR=../../../ocpi
+# Set this if some of the xml files are elsewhere, like a spec file that is being
+# shared with other implementers
+include $(OCPI_CDK_DIR)/include/rcc/rcc-worker.mk
