@@ -25,12 +25,16 @@ OCPI::Util::PValue out_pvlist[] = {
 
 int main ( int argc, char* argv [ ] )
 {
-	if(argc != 2) {
+	if(argc != 3) {
 		std::cout << std::endl
-			<< "Usage: ./image_filtering <image name>\n"
+			<< "Usage: ./image_filtering <image_name> <worker_name>\n"
 			<< std::endl;
 		return 0;
 	}
+	char* worker_name = argv[2];
+	char worker_name_full[20];
+	strcpy(worker_name_full, worker_name);
+	strcat(worker_name_full, " (RCC)");
 
 	try
 	{
@@ -89,10 +93,10 @@ int main ( int argc, char* argv [ ] )
 		std::vector<Demo::WorkerFacade*> facades;
 
 		/* ---- Create the worker --------------------------------- */
-		Demo::WorkerFacade worker ( "Sobel (RCC)",
+		Demo::WorkerFacade worker ( worker_name_full,
 				rcc_application,
-				Demo::get_rcc_uri ( "sobel" ).c_str ( ),
-				"sobel" );
+				Demo::get_rcc_uri ( worker_name ).c_str ( ),
+				worker_name );
 		/*
 		Demo::WorkerFacade ySobel ( "Sobel (RCC)",
 				rcc_application,
@@ -104,7 +108,7 @@ int main ( int argc, char* argv [ ] )
 		OCPI::Util::PValue worker_pvlist[] = {
 			OCPI::Util::PVULong("height", img->height),
 			OCPI::Util::PVULong("width", img->width),
-			//OCPI::Util::PVULong("xderiv", 1),
+			//OCPI::Util::PVULong("xderiv", 1), // Sobel only
 			OCPI::Util::PVEnd
 		};
 		worker.set_properties(worker_pvlist);
