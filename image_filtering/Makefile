@@ -3,7 +3,7 @@ WORDSIZE=64
 
 # ---- Executable targets ------------------------------------------------- #
 
-PROGRAMS := canny_edge_detector 
+PROGRAMS := image_filtering
 
 LIBRARY_PATH += -L./ -L$(OCPI_BASE_DIR)/lib/$(OCPI_OUT_DIR)
 
@@ -32,8 +32,8 @@ IMPORTS += \
 	-lhighgui \
 	-lml
 
-OBJS_canny_edge_detector := \
-	canny_edge_detector.o \
+OBJS_image_filtering := \
+	image_filtering.o \
 	DemoWorkerFacade.o \
 	$(NULL)
 
