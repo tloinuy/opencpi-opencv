@@ -107,8 +107,10 @@ int main ( int argc, char* argv [ ] )
 		OCPI::Util::PValue worker_pvlist[] = {
 			OCPI::Util::PVULong("height", img->height),
 			OCPI::Util::PVULong("width", img->width),
-			//OCPI::Util::PVULong("xderiv", 1), // Sobel/Scharr only
-      //OCPI::Util::PVULong("normalize", 1), // Blur only
+			//OCPI::Util::PVBool("xderiv", 1), // Sobel/Scharr only
+      //OCPI::Util::PVBool("normalize", 1), // Blur only
+      OCPI::Util::PVDouble("sigmaX", 0.8), // Gaussian blur
+      OCPI::Util::PVDouble("sigmaY", 0.8), // Gaussian blur
 			OCPI::Util::PVEnd
 		};
 		worker.set_properties(worker_pvlist);
