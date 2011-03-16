@@ -32,8 +32,6 @@ int main ( int argc, char* argv [ ] )
 		return 0;
 	}
 	char* worker_name = argv[2];
-	//strcpy(worker_name_full, worker_name);
-	//strcat(worker_name_full, " (RCC)");
 
 	try
 	{
