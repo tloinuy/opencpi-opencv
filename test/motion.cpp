@@ -9,12 +9,13 @@
 #include <cstdio>
 
 #define USE_OPENCV
-#define OPTICAL_FLOW
+//#define OPTICAL_FLOW
 #define SHOW_GRAYSCALE
 
 // ----- Optical Flow via Lucas-Kanade
 
-const int MAX_CORNERS = 500;
+#ifdef OPTICAL_FLOW
+const int MAX_CORNERS = 100;
 const int win_size = 10;
 
 // Temporary buffers
@@ -48,12 +49,12 @@ void calcOpticalFlowAndMark(IplImage *imgA, IplImage *imgB, IplImage *imgC) {
     tmp_image,
     cornersA,
     &corner_count,
-    0.01,
-    5.0,
-    0,
-    3,
-    0,
-    0.04
+    0.03, // quality_level
+    5.0, // min_distance
+    NULL,
+    3, // block_size (default)
+    0, // use_harris (default)
+    0.04 // k (default)
   );
   cvFindCornerSubPix(
     imgA,
@@ -65,11 +66,13 @@ void calcOpticalFlowAndMark(IplImage *imgA, IplImage *imgB, IplImage *imgC) {
   );
 
   // Call the Lucas-Kanade algorithm
+  int flags = CV_LKFLOW_PYR_A_READY;
   CvSize pyr_sz = cvSize( imgA->width+8, imgB->height/3 );
-  if( !pyrA )
+  if( !pyrA || !pyrB ) {
     pyrA = cvCreateImage( pyr_sz, IPL_DEPTH_32F, 1 );
-  if( !pyrB )
     pyrB = cvCreateImage( pyr_sz, IPL_DEPTH_32F, 1 );
+    flags = 0;
+  }
 
   cvCalcOpticalFlowPyrLK(
     imgA,
@@ -84,7 +87,7 @@ void calcOpticalFlowAndMark(IplImage *imgA, IplImage *imgB, IplImage *imgC) {
     features_found,
     feature_errors,
     cvTermCriteria( CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, .3 ),
-    0
+    flags
   );
 
   // Draw resulting velocity vectors
@@ -104,6 +107,7 @@ void calcOpticalFlowAndMark(IplImage *imgA, IplImage *imgB, IplImage *imgC) {
     cvLine( imgC, p0, p1, CV_RGB(255,0,0), 2 );
   }
 }
+#endif
 
 // ----- For OpenCV GUIs
 int g_slider_position = 0;
@@ -153,8 +157,11 @@ int main( int argc, char** argv ) {
 
   while(1) {
     // Scroll to next frame and read
+#ifdef OPTICAL_FLOW
+    pyrA = pyrB;
     imgA = imgB;
     prev_frame = cur_frame;
+#endif
     cur_frame = cvQueryFrame( g_capture );
     if( !cur_frame )
       break;
