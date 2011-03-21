@@ -86,8 +86,8 @@ int main ( int argc, char* argv [ ] )
 			OCPI::Util::PVULong("height", img->height),
 			OCPI::Util::PVULong("width", img->width),
       // TODO - investigate PVDouble?
-      OCPI::Util::PVULong("low_thresh", 10.0), // Canny
-      OCPI::Util::PVULong("high_thresh", 100.0), // Canny
+      OCPI::Util::PVULong("low_thresh", 10), // Canny
+      OCPI::Util::PVULong("high_thresh", 100), // Canny
 			OCPI::Util::PVEnd
 		};
 		worker.set_properties( worker_pvlist );
