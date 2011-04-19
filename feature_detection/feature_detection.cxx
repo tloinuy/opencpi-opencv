@@ -45,15 +45,6 @@ int main ( int argc, char* argv [ ] )
 		cvWaitKey(0);
 		return 0;
 		*/
-		/*
-		// Save smaller version
-		IplImage* smallImg = cvCreateImage(
-				cvSize(img->width / 2, img->height / 2),
-				img->depth, img->nChannels
-		);
-		cvResize(img, smallImg);
-		cvSaveImage("boston_small.jpg", smallImg);
-		*/
 
 		// Create an image for the output (grayscale)
 		IplImage* outImg = cvCreateImage(
@@ -98,7 +89,7 @@ int main ( int argc, char* argv [ ] )
 			&wOut = worker.port("out"),
 			&wIn = worker.port("in");
 
-		// Set external ports (need 3 buffers for out)
+		// Set external ports
 		OCPI::Container::ExternalPort
 			&myOut = wIn.connectExternal("aci_out"),
 			&myIn = wOut.connectExternal("aci_in");
@@ -141,7 +132,6 @@ int main ( int argc, char* argv [ ] )
       ilength, isEndOfData);
 
     std::cout << "My input buffer is size " << ilength << std::endl;
-    std::cout << "The contents of the input buffer is ";
 
     myInput->release();
     memcpy((uint8_t *) outImg->imageData, idata, outImg->height * outImg->widthStep);

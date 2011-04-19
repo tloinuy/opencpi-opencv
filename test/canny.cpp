@@ -2,7 +2,7 @@
 #include "cv.h"
 #include <cstdio>
 
-//#define USE_OPENCV
+#define USE_OPENCV
 
 int main( int argc, char** argv ) {
   if(argc != 2) {
