@@ -17,12 +17,13 @@
 
 int main ( int argc, char* argv [ ] )
 {
-	if(argc != 2) {
+	if(argc != 3) {
 		std::cout << std::endl
-			<< "Usage: ./feature_detection <image_name>\n"
+			<< "Usage: ./feature_detection <image_name> <worker_name>\n"
 			<< std::endl;
 		return 0;
 	}
+	char* worker_name = argv[2];
 
 	try
 	{
@@ -40,6 +41,10 @@ int main ( int argc, char* argv [ ] )
 		cvConvertScale(inImg, img);
 		cvNamedWindow( "Input", CV_WINDOW_AUTOSIZE );
 		cvShowImage( "Input", img );
+		/*
+		cvWaitKey(0);
+		return 0;
+		*/
 
 		// Create an image for the output (grayscale)
 		IplImage* outImg = cvCreateImage(
@@ -61,81 +66,32 @@ int main ( int argc, char* argv [ ] )
 		// Holds facades for group operations
 		std::vector<Demo::WorkerFacade*> facades;
 
-		/* ---- Create the workers --------------------------------- */
-    // canny_partial
-		Demo::WorkerFacade canny_worker (
-        "Canny (RCC)",
+		/* ---- Create the worker --------------------------------- */
+		Demo::WorkerFacade worker ( worker_name,
 				rcc_application,
-				Demo::get_rcc_uri ( "canny_partial" ).c_str ( ),
-				"canny_partial" );
+				Demo::get_rcc_uri ( worker_name ).c_str ( ),
+				worker_name );
 
-		OCPI::Util::PValue canny_worker_pvlist[] = {
+		// Set properties
+		OCPI::Util::PValue worker_pvlist[] = {
 			OCPI::Util::PVULong("height", img->height),
 			OCPI::Util::PVULong("width", img->width),
       OCPI::Util::PVDouble("low_thresh", 10), // Canny
       OCPI::Util::PVDouble("high_thresh", 100), // Canny
 			OCPI::Util::PVEnd
 		};
-		canny_worker.set_properties( canny_worker_pvlist );
-		facades.push_back ( &canny_worker );
+		worker.set_properties( worker_pvlist );
+		facades.push_back ( &worker );
 
+		// Set ports
 		OCPI::Container::Port
-			&cOut = canny_worker.port("out"),
-			&cIn_dx = canny_worker.port("in_dx"),
-			&cIn_dy = canny_worker.port("in_dy");
-
-    // sobel_x
-		Demo::WorkerFacade sobel_x_worker (
-        "Sobel X (RCC)",
-				rcc_application,
-				Demo::get_rcc_uri ( "sobel" ).c_str ( ),
-				"sobel" );
-
-		OCPI::Util::PValue sobel_x_worker_pvlist[] = {
-			OCPI::Util::PVULong("height", img->height),
-			OCPI::Util::PVULong("width", img->width),
-      OCPI::Util::PVULong("xderiv", 1), // TODO change to bool
-			OCPI::Util::PVEnd
-		};
-		sobel_x_worker.set_properties( sobel_x_worker_pvlist );
-		facades.push_back ( &sobel_x_worker );
-
-		OCPI::Container::Port
-			&sxOut = sobel_x_worker.port("out"),
-			&sxIn = sobel_x_worker.port("in");
-
-    // sobel_y
-		Demo::WorkerFacade sobel_y_worker (
-        "Sobel Y (RCC)",
-				rcc_application,
-				Demo::get_rcc_uri ( "sobel" ).c_str ( ),
-				"sobel" );
-
-		OCPI::Util::PValue sobel_y_worker_pvlist[] = {
-			OCPI::Util::PVULong("height", img->height),
-			OCPI::Util::PVULong("width", img->width),
-      OCPI::Util::PVULong("xderiv", 0), // TODO change to bool
-			OCPI::Util::PVEnd
-		};
-		sobel_y_worker.set_properties( sobel_y_worker_pvlist );
-		facades.push_back ( &sobel_y_worker );
-
-		OCPI::Container::Port
-			&syOut = sobel_y_worker.port("out"),
-			&syIn = sobel_y_worker.port("in");
-
-		/* ---- Create connections --------------------------------- */
-
-    cIn_dx.connect( sxOut );
-    cIn_dy.connect( syOut );
+			&wOut = worker.port("out"),
+			&wIn = worker.port("in");
 
 		// Set external ports
 		OCPI::Container::ExternalPort
-			&myOutX = sxIn.connectExternal("aci_out_dx"),
-			&myOutY = syIn.connectExternal("aci_out_dy"),
-			&myIn = cOut.connectExternal("aci_in");
-
-    printf(">>> DONE CONNECTING!\n");
+			&myOut = wIn.connectExternal("aci_out"),
+			&myIn = wOut.connectExternal("aci_in");
 
 		/* ---- Start all of the workers ------------------------------------- */
 		std::for_each ( facades.rbegin ( ),
@@ -148,8 +104,6 @@ int main ( int argc, char* argv [ ] )
 				interfaces.end(),
 				Demo::dispatch );
 
-    printf(">>> DONE STARTING!\n");
-
 		// Output info
 		uint8_t *odata;
 		uint32_t olength;
@@ -160,40 +114,15 @@ int main ( int argc, char* argv [ ] )
 		uint8_t opcode = 0;
 		bool isEndOfData = false;
 
-		// Current line
-		uint8_t *imgLine = (uint8_t *) img->imageData;
+    // Set output data
+    OCPI::Container::ExternalBuffer* myOutput = myOut.getBuffer(odata, olength);
+    memcpy(odata, (uint8_t *) img->imageData, img->height * img->widthStep);
+    myOutput->put(0, img->height * img->widthStep, false);
 
-		for(int i = 0; i < img->height; i++) {
-      printf(">>> ACI sending line: %d\n", i);
-			// Set output data
-			OCPI::Container::ExternalBuffer* myOutput;
-      
-      myOutput = myOutX.getBuffer(odata, olength);
-			memcpy(odata, imgLine, img->widthStep);
-			myOutput->put(0, img->widthStep, false);
+    std::cout << "My output buffer is size " << olength << std::endl;
 
-      printf(">>> ACI got X\n");
-
-      myOutput = myOutY.getBuffer(odata, olength);
-			memcpy(odata, imgLine, img->widthStep);
-			myOutput->put(0, img->widthStep, false);
-
-      printf(">>> ACI got Y\n");
-
-			imgLine += img->widthStep;
-
-			std::cout << "My output buffer is size " << olength << std::endl;
-
-			// Call dispatch so the worker can "act" on its input data
-			std::for_each ( interfaces.begin(),
-					interfaces.end(),
-					Demo::dispatch );
-		}
-		// TODO - last line?
+    // Call dispatch so the worker can "act" on its input data
     std::for_each ( interfaces.begin(),
-        interfaces.end(),
-        Demo::dispatch );
-    std::for_each ( interfaces.begin(), // TODO - twice!
         interfaces.end(),
         Demo::dispatch );
 

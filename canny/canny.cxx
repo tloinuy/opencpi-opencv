@@ -19,7 +19,7 @@ int main ( int argc, char* argv [ ] )
 {
 	if(argc != 2) {
 		std::cout << std::endl
-			<< "Usage: ./feature_detection <image_name>\n"
+			<< "Usage: ./canny <image_name>\n"
 			<< std::endl;
 		return 0;
 	}

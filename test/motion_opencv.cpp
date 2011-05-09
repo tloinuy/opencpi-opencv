@@ -6,11 +6,15 @@
 #include "highgui.h"
 #include "cv.h"
 #include "cxcore.h"
+
 #include <cstdio>
+#include <cmath>
 
 #define USE_OPENCV
 #define OPTICAL_FLOW
 #define SHOW_GRAYSCALE
+
+static const double pi = 3.14159265358979323846;
 
 // ----- Optical Flow via Lucas-Kanade
 
@@ -56,7 +60,6 @@ void calcOpticalFlowAndMark(IplImage *imgA, IplImage *imgB, IplImage *imgC) {
     0, // use_harris (default)
     0.04 // k (default)
   );
-  /*
   cvFindCornerSubPix(
     imgA,
     cornersA,
@@ -65,7 +68,6 @@ void calcOpticalFlowAndMark(IplImage *imgA, IplImage *imgB, IplImage *imgC) {
     cvSize(-1, -1),
     cvTermCriteria(CV_TERMCRIT_ITER|CV_TERMCRIT_EPS, 20, 0.03)
   );
-  */
 
   // Call the Lucas-Kanade algorithm
   int flags = CV_LKFLOW_PYR_A_READY;
@@ -95,18 +97,45 @@ void calcOpticalFlowAndMark(IplImage *imgA, IplImage *imgB, IplImage *imgC) {
   // Draw resulting velocity vectors
   for( int i = 0; i < corner_count; i++ ) {
     if( features_found[i] == 0 || feature_errors[i] > 550 ) {
-      printf("Error is %f/n", feature_errors[i]);
+      // printf("Error is %f/n", feature_errors[i]);
       continue;
     }
-    CvPoint p0 = cvPoint(
-      cvRound( cornersA[i].x ),
-      cvRound( cornersA[i].y )
-    );
-    CvPoint p1 = cvPoint(
-      cvRound( cornersB[i].x ),
-      cvRound( cornersB[i].y )
-    );
-    cvLine( imgC, p0, p1, CV_RGB(255,0,0), 2 );
+
+    double x0 = cornersA[i].x;
+    double y0 = cornersA[i].y;
+    CvPoint p = cvPoint( cvRound(x0), cvRound(y0) );
+    double x1 = cornersB[i].x;
+    double y1 = cornersB[i].y;
+    CvPoint q = cvPoint( cvRound(x1), cvRound(y1) );
+    //if( sqrt( (double) (y1-y0)*(y1-y0) + (x1-x0)*(x1-x0) ) < 0.1 )
+    //if(fabs(y1 - y0) < .5 || fabs(x1 - x0) < .5)
+    //  continue;
+    //printf("%.4lf %.4lf -> %.4lf %.4lf\n", x0, y0, x1, y1);
+
+    CvScalar line_color = CV_RGB(255, 0, 0);
+    int line_thickness = 1;
+    // Main line (p -> q)
+    //cvLine( imgC, p, q, CV_RGB(255,0,0), 2 );
+
+    // Main line (p -> q) lengthened
+    double angle = atan2( (double) y1 - y0, (double) x1 - x0 );
+    double hypotenuse = sqrt( (double) (y1-y0)*(y1-y0) + (x1-x0)*(x1-x0) );
+    if(hypotenuse < 1.01)
+      hypotenuse = 1.01;
+    if(hypotenuse > 1.99)
+      hypotenuse = 1.99;
+    q.x = cvRound(x0 + 6 * hypotenuse * cos(angle));
+    q.y = cvRound(y0 + 6 * hypotenuse * sin(angle));
+    cvLine( imgC, p, q, line_color, line_thickness, CV_AA, 0 );
+
+    // Arrows
+    p.x = (int) (x0 + 5 * hypotenuse * cos(angle + pi / 4));
+    p.y = (int) (y0 + 5 * hypotenuse * sin(angle + pi / 4));
+    cvLine( imgC, p, q, line_color, line_thickness, CV_AA, 0 );
+
+    p.x = (int) (x0 + 5 * hypotenuse * cos(angle - pi / 4));
+    p.y = (int) (y0 + 5 * hypotenuse * sin(angle - pi / 4));
+    cvLine( imgC, p, q, line_color, line_thickness, CV_AA, 0 );
   }
 }
 #endif
@@ -117,10 +146,10 @@ CvCapture *g_capture = NULL;
 
 void onTrackbarSlide(int pos) {
   cvSetCaptureProperty(
-    g_capture,
-    CV_CAP_PROP_POS_FRAMES,
-    pos
-  );
+      g_capture,
+      CV_CAP_PROP_POS_FRAMES,
+      pos
+      );
 }
 
 // ----- Main
@@ -133,17 +162,17 @@ int main( int argc, char** argv ) {
   cvNamedWindow( "Example Video", CV_WINDOW_AUTOSIZE );
   g_capture = cvCreateFileCapture( argv[1] );
   int frames = (int) cvGetCaptureProperty(
-    g_capture,
-    CV_CAP_PROP_FRAME_COUNT
-  );
+      g_capture,
+      CV_CAP_PROP_FRAME_COUNT
+      );
   if( frames != 0 ) {
     cvCreateTrackbar(
-      "Position",
-      "Example Video",
-      &g_slider_position,
-      frames,
-      onTrackbarSlide
-    );
+        "Position",
+        "Example Video",
+        &g_slider_position,
+        frames,
+        onTrackbarSlide
+        );
   }
 
   // Keep track of frames
@@ -160,9 +189,17 @@ int main( int argc, char** argv ) {
   while(1) {
     // Scroll to next frame and read
 #ifdef OPTICAL_FLOW
+    if( pyrB )
+      cvCopy( pyrB, pyrA );
+    if( imgB )
+      cvCopy( imgB, imgA );
+    if( cur_frame )
+      cvCopy( cur_frame, prev_frame );
+    /*
     pyrA = pyrB;
     imgA = imgB;
     prev_frame = cur_frame;
+    */
 #endif
     cur_frame = cvQueryFrame( g_capture );
     if( !cur_frame )
@@ -172,7 +209,7 @@ int main( int argc, char** argv ) {
     // Convert frames to 8U single channel
     cvConvertImage( cur_frame, imgB );
     cvCopyImage( cur_frame, imgC );
-    calcOpticalFlowAndMark(imgA, imgB, imgC);
+    calcOpticalFlowAndMark( imgA, imgB, imgC );
     cvShowImage( "Example Video", imgC );
 #else
     cvShowImage( "Example Video", cur_frame );

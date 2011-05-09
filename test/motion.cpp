@@ -114,7 +114,6 @@ void calcOpticalFlowAndMark(IplImage *imgA, IplImage *imgB, IplImage *imgC) {
 
     CvScalar line_color = CV_RGB(255, 0, 0);
     int line_thickness = 1;
-    // Main line (p -> q)
     //cvLine( imgC, p, q, CV_RGB(255,0,0), 2 );
 
     // Main line (p -> q) lengthened
@@ -195,11 +194,6 @@ int main( int argc, char** argv ) {
       cvCopy( imgB, imgA );
     if( cur_frame )
       cvCopy( cur_frame, prev_frame );
-    /*
-    pyrA = pyrB;
-    imgA = imgB;
-    prev_frame = cur_frame;
-    */
 #endif
     cur_frame = cvQueryFrame( g_capture );
     if( !cur_frame )
@@ -215,7 +209,7 @@ int main( int argc, char** argv ) {
     cvShowImage( "Example Video", cur_frame );
 #endif
 
-    char c = cvWaitKey( 33 ); // ms to wait
+    char c = cvWaitKey( 10 ); // ms to wait
     if( c == 27 ) // ESC key
       break;
   }

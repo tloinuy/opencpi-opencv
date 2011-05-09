@@ -40,7 +40,10 @@ doLineX(Pixel *l0, Pixel *l1, Pixel *l2, Pixel *out, unsigned width) {
       -1 * l0[i-1] + 1 * l0[i+1] +
       -2 * l1[i-1] + 2 * l1[i+1] +
       -1 * l2[i-1] + 1 * l2[i+1];
-    out[i] = t < 0 ? 0 : (t > MAX ? MAX : t);
+    if(t < 0) t = -t;
+    if(t > MAX) t = MAX;
+    out[i] = t;
+    // out[i] = t < 0 ? 0 : (t > MAX ? MAX : t);
   }
   out[0] = out[width-1] = 0; // boundary conditions
 }
