@@ -69,7 +69,7 @@ int main ( int argc, char* argv [ ] )
 		OCPI::Util::PValue features_worker_pvlist[] = {
 			OCPI::Util::PVULong("height", img->height),
 			OCPI::Util::PVULong("width", img->width),
-      OCPI::Util::PVULong("max_corners", 100),
+      OCPI::Util::PVULong("max_corners", 50),
       OCPI::Util::PVDouble("quality_level", 0.03),
       OCPI::Util::PVDouble("min_distance", 5.0),
 			OCPI::Util::PVEnd
@@ -175,8 +175,15 @@ int main ( int argc, char* argv [ ] )
     myInput->release();
     // Mark features
     size_t ncorners = ilength / (2 * sizeof(float));
+    float *corners = (float *) idata;
     std::cout << "My corners " << ncorners << std::endl;
-    // TODO
+    for( int i = 0; i < ncorners; i++ ) {
+      float x = corners[2*i];
+      float y = corners[2*i+1];
+      CvPoint p = cvPoint( cvRound(x), cvRound(y) );
+      CvScalar color = CV_RGB(255, 0, 0);
+      cvCircle( outImg, p, 5, color, 2 );
+    }
 
 		// Show image
 		cvShowImage( "Output", outImg );

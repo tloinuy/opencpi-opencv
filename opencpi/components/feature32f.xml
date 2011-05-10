@@ -2,6 +2,6 @@
 <!-- The first opcode sets the 32 bit image protocol. -->
 <Protocol>
   <Operation Name="Features">
-    <Argument Name="Points" Type="float" SequenceLength="4M"/>
+    <Argument Name="Points" Type="float" SequenceLength="1M"/>
   </Operation>
 </Protocol>
