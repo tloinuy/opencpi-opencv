@@ -78,16 +78,18 @@ struct ptvector {
 
 
 static void
-calcMinEigenVal( const Mat& _cov, Mat& _dst )
+calcMinEigenVal( int H, int W, const float* _cov, float* _dst )
 {
     int i, j;
-    Size size = _cov.size();
+    // Size size = _cov.size();
 
-    for( i = 0; i < size.height; i++ )
+    for( i = 0; i < H; i++ )
     {
-        const float* cov = (const float*)(_cov.data + _cov.step*i);
-        float* dst = (float*)(_dst.data + _dst.step*i);
-        for( j = 0; j < size.width; j++ )
+        // const float* cov = (const float*)(_cov.data + _cov.step*i);
+        // float* dst = (float*)(_dst.data + _dst.step*i);
+        const float* cov = (const float*) (_cov + i*W*3);
+        float* dst = (float*) (_dst + i*W);
+        for( j = 0; j < W; j++ )
         {
             double a = cov[j*3]*0.5;
             double b = cov[j*3+1];
@@ -98,54 +100,15 @@ calcMinEigenVal( const Mat& _cov, Mat& _dst )
 }
 
 static void
-cornerEigenValsVecs( int H, int W, char *src, const Mat& src_orig,
-                      Mat& eigenv, int block_size,
-                     int aperture_size, int op_type, double k=0.,
-                     int borderType=BORDER_DEFAULT )
+cornerEigenValsVecs( int H, int W, char *src,
+                     float* eigenv) //, int block_size,
+                     // int aperture_size, int op_type, double k=0.,
+                     // int borderType=BORDER_DEFAULT )
 {
-    /*
-    int depth = src.depth();
-    double scale = (double)(1 << ((aperture_size > 0 ? aperture_size : 3) - 1)) * block_size;
-    // 1 << (3 - 1) = 4
-    // 4 * 3 = 12
-    if( depth == CV_8U )
-        scale *= 255.;
-    printf("%.2lf\n", scale);
-    scale = 1./scale;
-    */
-
     // block_size = 3, aperture_size = 3, pixel depth 8U
     double scale = 1.0 / (255.0 * 12); 
 
-//    CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
-
     int i, j;
-
-/*
-    Mat Dx, Dy, src2;
-    src2.create( cvSize( W, H ), CV_32F );
-    printf("src2: %d, W: %d\n", src2.step, W);
-    for (i = 0; i < H; i++) {
-      float *src3 = (float *) (src2.data + i*src2.step);
-      for (j = 0; j < W; j++)
-        src3[j] = (float ) src[i*W+j] / 255.0;
-
-      //if(i > 100 && i < 103) {
-      //  printf("- %.4lf %.4lf %.4lf\n", src3[10], src3[11], src3[12]);
-      //  const char *src4 = (const char *) (src_orig.data + i*src_orig.step);
-      //  printf("> %.4lf %.4lf %.4lf\n", src4[10], src4[11], src4[12]);
-      //}
-    }
-    Sobel( src_orig, Dx, CV_32F, 1, 0, aperture_size, scale, 0, borderType );
-    Sobel( src_orig, Dy, CV_32F, 0, 1, aperture_size, scale, 0, borderType );
-
-    for( i = 200; i < 203; i++)
-      for (j = 500; j < 505; j++) {
-        const float *dxdata = (const float *) (Dx.data + i*Dx.step);
-        const float *dydata = (const float *) (Dy.data + i*Dy.step);
-        printf("> %.4lf %.4lf\n", dxdata[j], dydata[j]);
-      }
-      */
 
     // need 32F type - TODO
     float *Dx = (float *) malloc(H * W * sizeof(float));
@@ -159,19 +122,9 @@ cornerEigenValsVecs( int H, int W, char *src, const Mat& src_orig,
       for( j = 1; j < W - 1; j++ ) {
         float dx = l0[j+1] + 2*l1[j+1] + l2[j+1] - l0[j-1] - 2*l1[j-1] - l2[j-1];
         float dy = l2[j-1] + 2*l2[j] + l2[j+1] - l0[j+1] - 2*l0[j] - l0[j-1];
-        /*
-        float dx = src[l0+j+1] + 2*src[l1+j+1] + src[l2+j+1]
-                 - src[l0+j-1] - 2*src[l1+j-1] - src[l2+j-1];
-        float dy = src[l2+j-1] + 2*src[l2+j] + src[l2+j+1]
-                 - src[l0+j-1] - 2*src[l0+j] - src[l0+j+1];
-        */
 
         Dx[i*W+j] = dx * scale;
         Dy[i*W+j] = dy * scale;
-        //if(dx > 2 && dy > 2) {
-        //  printf("%d %d %.2lf %.2lf | %.4lf %.4lf\n", i, j, dx, dy, Dx[l1+j], Dy[l1+j]);
-        //  printf(" >>> %.4lf %.4lf\n", Dx2.data[i*Dx2.step+j], Dy2.data[i*Dy2.step+j]);
-        //}
       }
       // borders
       Dx[i*W] = Dy[i*W] = 0;
@@ -183,27 +136,15 @@ cornerEigenValsVecs( int H, int W, char *src, const Mat& src_orig,
       Dx[(H-1)*W+j] = Dy[(H-1)*W+j] = 0;
     }
 
-/*
-    for( i = 200; i < 203; i++)
-      for (j = 500; j < 505; j++) {
-        const float *dxdata = (const float *) (Dx + i*W);
-        const float *dydata = (const float *) (Dy + i*W);
-        printf("> %.4lf %.4lf\n", dxdata[j], dydata[j]);
-      }
-      */
-
-
-    //Size size = src.size();
-    Size size = cvSize( W, H );
-    Mat cov( size, CV_32FC3 );
+    // Size size = src.size();
+    // Size size = cvSize( W, H );
+    // Mat cov( size, CV_32FC3 );
+    float *cov = (float *) malloc(H * W * 3 * sizeof(float));
 
     for( i = 0; i < H; i++ )
     {
-        float* cov_data = (float*)(cov.data + i*cov.step);
-        /*
-        const float* dxdata = (const float*)(Dx.data + i*Dx.step);
-        const float* dydata = (const float*)(Dy.data + i*Dy.step);
-        */
+        // float* cov_data = (float*)(cov.data + i*cov.step);
+        float *cov_data = (float *) cov + i*W*3;
         const float* dxdata = (const float*)(Dx + i*W);
         const float* dydata = (const float*)(Dy + i*W);
 
@@ -211,7 +152,6 @@ cornerEigenValsVecs( int H, int W, char *src, const Mat& src_orig,
         {
             float dx = dxdata[j];
             float dy = dydata[j];
-            //printf("%d %d: %.6lf %.6lf\n", i, j, dx, dy);
 
             cov_data[j*3] = dx*dx;
             cov_data[j*3+1] = dx*dy;
@@ -223,26 +163,50 @@ cornerEigenValsVecs( int H, int W, char *src, const Mat& src_orig,
     free( Dy );
 
     // TODO
-    boxFilter(cov, cov, cov.depth(), Size(block_size, block_size),
-        Point(-1,-1), false, borderType ); // normalize = false
+    // boxFilter(cov, cov, cov.depth(), Size(block_size, block_size),
+    //     Point(-1,-1), false, borderType ); // normalize = false
+    float *cov_tmp = (float *) malloc(H * W* sizeof(float) * 3);
+    for( i = 1; i < H - 1; i++ ) {
+      float *l0 = (float *) cov + (i-1)*W*3;
+      float *l1 = (float *) cov + i*W*3;
+      float *l2 = (float *) cov + (i+1)*W*3;
+      float *cov_dst = (float *) cov_tmp + i*W*3;
+      int k;
+      for( k = 0; k < 3; k++ ) {
+        for( j = 1; j < W - 1; j++ ) {
+          cov_dst[3*j+k] = l0[3*j+k] + l0[3*(j-1)+k] + l0[3*(j+1)+k];
+                         + l1[3*j+k] + l1[3*(j-1)+k] + l1[3*(j+1)+k]
+                         + l2[3*j+k] + l2[3*(j-1)+k] + l2[3*(j+1)+k];
+        }
+      }
+    }
+    for( i = 1; i < H - 1; i++ ) {
+      float *cov_src = (float *) cov_tmp + i*W*3;
+      float *cov_dst = (float *) cov + i*W*3;
+      for( j = 1; j < W - 1; j++ ) {
+        cov_dst[3*j] = cov_src[3*j];
+        cov_dst[3*j+1] = cov_src[3*j+1];
+        cov_dst[3*j+2] = cov_src[3*j+2];
+      }
+    }
 
-//    if( op_type == MINEIGENVAL )
-        calcMinEigenVal( cov, eigenv );
-        /*
-    else if( op_type == HARRIS )
-        calcHarris( cov, eigenv, k );
-    else if( op_type == EIGENVALSVECS )
-        calcEigenValsVecs( cov, eigenv );
-        */
+    // cleanup
+    free( cov_tmp );
+
+    calcMinEigenVal( H, W, cov, eigenv );
+
+    // cleanup
+    free( cov );
 }
 
-void test_cornerMinEigenVal( int H, int W, char *src, const Mat& src_orig,
-                          Mat& dst, int blockSize, int ksize, int borderType )
+void test_cornerMinEigenVal( int H, int W, char *src,
+                          float* dst) //, int blockSize, int ksize, int borderType )
 {
     printf("HERE\n");
-    dst.create( cvSize( W, H ), CV_32F );
-    cornerEigenValsVecs( H, W, src, src_orig,
-                          dst, blockSize, ksize, 0/*MINEIGENVAL*/, 0, borderType );
+    // dst.create( cvSize( W, H ), CV_32F );
+    cornerEigenValsVecs( H, W, src, dst );
+                          //, blockSize, ksize, 0/*MINEIGENVAL*/, 0, borderType );
+    printf("DONE\n");
 }
 
 
@@ -254,50 +218,74 @@ void features( IplImage *image ) {
 
   int maxCorners = 100;
   double qualityLevel = 0.03;
-  double minDistance = 5.0;
+  double minDistance = 7.0;
   Mat mask;
   int blockSize = 3;
 
-  Mat eig, tmp;
-  test_cornerMinEigenVal( H, W, src, image, eig, blockSize, 3, BORDER_DEFAULT ); // TODO - tough part
+  // Mat eig, tmp;
+  float *eig = (float *) malloc(H * W * sizeof(float));
+  float *tmp = (float *) malloc(H * W * sizeof(float));
+  test_cornerMinEigenVal( H, W, src, eig); //, blockSize, 3, BORDER_DEFAULT ); // TODO
 
+  int x, y;
   double maxVal = 0;
-  //  threshold( eig, eig, maxVal*qualityLevel, 0, THRESH_TOZERO ); // TODO
-  for( int y = 1; y < H - 1; y++ ) {
-    for( int x = 1; x < W - 1; x++ ) {
-      float val = eig.at<float>(y, x);
+  // minMaxLoc( eig, 0, &maxVal, 0, 0, mask ); // TODO
+  for( y = 0; y < H; y++ ) {
+    for( x = 0; x < W; x++ ) {
+      float val = eig[y*W+x]; // eig.at<float>(y, x);
       if( val > maxVal )
         maxVal = val;
     }
   }
 
-  //  minMaxLoc( eig, 0, &maxVal, 0, 0, mask ); // TODO
   double threshold = maxVal * qualityLevel;
-  for( int y = 1; y < H - 1; y++ ) {
-    for( int x = 1; x < W - 1; x++ ) {
-      float val = eig.at<float>(y, x);
+  // threshold( eig, eig, maxVal*qualityLevel, 0, THRESH_TOZERO ); // TODO
+  for( y = 0; y < H; y++ ) {
+    for( x = 0; x < W; x++ ) {
+      float val = eig[y*W+x]; // eig.at<float>(y, x);
       if(val < threshold)
-        eig.at<float>(y, x) = 0;
+        eig[y*W+x] = 0;
+        // eig.at<float>(y, x) = 0;
     }
   }
 
-  dilate( eig, tmp, Mat()); // TODO
+  // dilate( eig, tmp, Mat()); // TODO
+  for( y = 1; y < H - 1; y++ ) {
+    for( x = 1; x < W - 1; x++ ) {
+      float val = eig[y*W+x];
+      int dx, dy;
+      for( dy = -1; dy <= 1; dy++ )
+        for( dx = -1; dx <= 1; dx++ )
+          val = zmax(eig[(y+dy)*W+x+dx], val);
 
+      tmp[y*W+x] = val;
+    }
+    // border
+    tmp[y*W] = eig[y*W];
+    tmp[y*W+W-1] = eig[y*W+W-1];
+  }
+  // border
+  for( x = 0; x < W; x++ ) {
+    tmp[x] = eig[x];
+    tmp[(H-1)*W+x] = eig[(H-1)*W+x];
+  }
 
 
   fpvector tmpCorners;
 
   // collect list of pointers to features - put them into temporary image
-  for( int y = 1; y < H - 1; y++ )
+  for( y = 1; y < H - 1; y++ )
   {
-    float* eig_data = (float*)eig.ptr(y);
-    const float* tmp_data = (const float*)tmp.ptr(y);
-    const uchar* mask_data = mask.data ? mask.ptr(y) : 0;
+    // float* eig_data = (float*)eig.ptr(y);
+    // const float* tmp_data = (const float*)tmp.ptr(y);
+    float* eig_data = eig + y*W;
+    const float* tmp_data = (const float*) (tmp + y*W);
+    // const uchar* mask_data = mask.data ? mask.ptr(y) : 0;
 
-    for( int x = 1; x < W - 1; x++ )
+    for( x = 1; x < W - 1; x++ )
     {
       float val = eig_data[x];
-      if( val != 0 && val == tmp_data[x] && (!mask_data || mask_data[x]) )
+      if( val != 0 && val == tmp_data[x]) // && (!mask_data || mask_data[x]) )
         tmpCorners.push_back(eig_data + x);
     }
   }
@@ -318,9 +306,14 @@ void features( IplImage *image ) {
 
   for( i = 0; i < total; i++ )
   {
+    /*
     int ofs = (int)((const uchar*)tmpCorners[i] - eig.data);
     int y = (int)(ofs / eig.step);
     int x = (int)((ofs - y*eig.step)/sizeof(float));
+    */
+    int ofs = (int)(tmpCorners[i] - eig);
+    y = (int)(ofs / W);
+    x = (int)(ofs - y*W);
 
     bool good = true;
 
@@ -338,9 +331,10 @@ void features( IplImage *image ) {
     x2 = zmin(grid_width-1, x2);
     y2 = zmin(grid_width-1, y2);
 
-    for( int yy = y1; yy <= y2; yy++ )
+    int xx, yy;
+    for( yy = y1; yy <= y2; yy++ )
     {
-      for( int xx = x1; xx <= x2; xx++ )
+      for( xx = x1; xx <= x2; xx++ )
       {   
         ptvector &m = grid[yy*grid_width + xx];
 
@@ -374,7 +368,11 @@ break_out:
         if( maxCorners > 0 && (int)ncorners == maxCorners )
           break;
       }
-    }
+  }
+
+  // cleanup
+  free( eig );
+  free( tmp );
 }
 
 int main( int argc, char** argv ) {
