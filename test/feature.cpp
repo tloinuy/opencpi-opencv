@@ -174,7 +174,7 @@ cornerEigenValsVecs( int H, int W, char *src,
       int k;
       for( k = 0; k < 3; k++ ) {
         for( j = 1; j < W - 1; j++ ) {
-          cov_dst[3*j+k] = l0[3*j+k] + l0[3*(j-1)+k] + l0[3*(j+1)+k];
+          cov_dst[3*j+k] = l0[3*j+k] + l0[3*(j-1)+k] + l0[3*(j+1)+k]
                          + l1[3*j+k] + l1[3*(j-1)+k] + l1[3*(j+1)+k]
                          + l2[3*j+k] + l2[3*(j-1)+k] + l2[3*(j+1)+k];
         }
