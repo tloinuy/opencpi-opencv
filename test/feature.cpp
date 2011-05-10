@@ -75,12 +75,182 @@ struct ptvector {
   size_t size() { return cursize; }
 };
 
+
+
+static void
+calcMinEigenVal( const Mat& _cov, Mat& _dst )
+{
+    int i, j;
+    Size size = _cov.size();
+
+    for( i = 0; i < size.height; i++ )
+    {
+        const float* cov = (const float*)(_cov.data + _cov.step*i);
+        float* dst = (float*)(_dst.data + _dst.step*i);
+        for( j = 0; j < size.width; j++ )
+        {
+            double a = cov[j*3]*0.5;
+            double b = cov[j*3+1];
+            double c = cov[j*3+2]*0.5;
+            dst[j] = (float)((a + c) - std::sqrt((a - c)*(a - c) + b*b));
+        }
+    }
+}
+
+static void
+cornerEigenValsVecs( int H, int W, char *src, const Mat& src_orig,
+                      Mat& eigenv, int block_size,
+                     int aperture_size, int op_type, double k=0.,
+                     int borderType=BORDER_DEFAULT )
+{
+    /*
+    int depth = src.depth();
+    double scale = (double)(1 << ((aperture_size > 0 ? aperture_size : 3) - 1)) * block_size;
+    // 1 << (3 - 1) = 4
+    // 4 * 3 = 12
+    if( depth == CV_8U )
+        scale *= 255.;
+    printf("%.2lf\n", scale);
+    scale = 1./scale;
+    */
+
+    // block_size = 3, aperture_size = 3, pixel depth 8U
+    double scale = 1.0 / (255.0 * 12); 
+
+//    CV_Assert( src.type() == CV_8UC1 || src.type() == CV_32FC1 );
+
+    int i, j;
+
+/*
+    Mat Dx, Dy, src2;
+    src2.create( cvSize( W, H ), CV_32F );
+    printf("src2: %d, W: %d\n", src2.step, W);
+    for (i = 0; i < H; i++) {
+      float *src3 = (float *) (src2.data + i*src2.step);
+      for (j = 0; j < W; j++)
+        src3[j] = (float ) src[i*W+j] / 255.0;
+
+      //if(i > 100 && i < 103) {
+      //  printf("- %.4lf %.4lf %.4lf\n", src3[10], src3[11], src3[12]);
+      //  const char *src4 = (const char *) (src_orig.data + i*src_orig.step);
+      //  printf("> %.4lf %.4lf %.4lf\n", src4[10], src4[11], src4[12]);
+      //}
+    }
+    Sobel( src_orig, Dx, CV_32F, 1, 0, aperture_size, scale, 0, borderType );
+    Sobel( src_orig, Dy, CV_32F, 0, 1, aperture_size, scale, 0, borderType );
+
+    for( i = 200; i < 203; i++)
+      for (j = 500; j < 505; j++) {
+        const float *dxdata = (const float *) (Dx.data + i*Dx.step);
+        const float *dydata = (const float *) (Dy.data + i*Dy.step);
+        printf("> %.4lf %.4lf\n", dxdata[j], dydata[j]);
+      }
+      */
+
+    // need 32F type - TODO
+    float *Dx = (float *) malloc(H * W * sizeof(float));
+    float *Dy = (float *) malloc(H * W * sizeof(float));
+    // smooth?
+
+    for( i = 1; i < H - 1; i++ ) {
+      uint8_t *l0 = (uint8_t *) (src + (i-1)*W);
+      uint8_t *l1 = (uint8_t *) (src + (i)*W);
+      uint8_t *l2 = (uint8_t *) (src + (i+1)*W);
+      for( j = 1; j < W - 1; j++ ) {
+        float dx = l0[j+1] + 2*l1[j+1] + l2[j+1] - l0[j-1] - 2*l1[j-1] - l2[j-1];
+        float dy = l2[j-1] + 2*l2[j] + l2[j+1] - l0[j+1] - 2*l0[j] - l0[j-1];
+        /*
+        float dx = src[l0+j+1] + 2*src[l1+j+1] + src[l2+j+1]
+                 - src[l0+j-1] - 2*src[l1+j-1] - src[l2+j-1];
+        float dy = src[l2+j-1] + 2*src[l2+j] + src[l2+j+1]
+                 - src[l0+j-1] - 2*src[l0+j] - src[l0+j+1];
+        */
+
+        Dx[i*W+j] = dx * scale;
+        Dy[i*W+j] = dy * scale;
+        //if(dx > 2 && dy > 2) {
+        //  printf("%d %d %.2lf %.2lf | %.4lf %.4lf\n", i, j, dx, dy, Dx[l1+j], Dy[l1+j]);
+        //  printf(" >>> %.4lf %.4lf\n", Dx2.data[i*Dx2.step+j], Dy2.data[i*Dy2.step+j]);
+        //}
+      }
+      // borders
+      Dx[i*W] = Dy[i*W] = 0;
+      Dx[i*W+W-1] = Dy[i*W+W-1] = 0;
+    }
+    for( j = 0; j < W; j++) {
+      // borders
+      Dx[j] = Dy[j] = 0;
+      Dx[(H-1)*W+j] = Dy[(H-1)*W+j] = 0;
+    }
+
+/*
+    for( i = 200; i < 203; i++)
+      for (j = 500; j < 505; j++) {
+        const float *dxdata = (const float *) (Dx + i*W);
+        const float *dydata = (const float *) (Dy + i*W);
+        printf("> %.4lf %.4lf\n", dxdata[j], dydata[j]);
+      }
+      */
+
+
+    //Size size = src.size();
+    Size size = cvSize( W, H );
+    Mat cov( size, CV_32FC3 );
+
+    for( i = 0; i < H; i++ )
+    {
+        float* cov_data = (float*)(cov.data + i*cov.step);
+        /*
+        const float* dxdata = (const float*)(Dx.data + i*Dx.step);
+        const float* dydata = (const float*)(Dy.data + i*Dy.step);
+        */
+        const float* dxdata = (const float*)(Dx + i*W);
+        const float* dydata = (const float*)(Dy + i*W);
+
+        for( j = 0; j < W; j++ )
+        {
+            float dx = dxdata[j];
+            float dy = dydata[j];
+            //printf("%d %d: %.6lf %.6lf\n", i, j, dx, dy);
+
+            cov_data[j*3] = dx*dx;
+            cov_data[j*3+1] = dx*dy;
+            cov_data[j*3+2] = dy*dy;
+        }
+    }
+    // cleanup
+    free( Dx );
+    free( Dy );
+
+    // TODO
+    boxFilter(cov, cov, cov.depth(), Size(block_size, block_size),
+        Point(-1,-1), false, borderType ); // normalize = false
+
+//    if( op_type == MINEIGENVAL )
+        calcMinEigenVal( cov, eigenv );
+        /*
+    else if( op_type == HARRIS )
+        calcHarris( cov, eigenv, k );
+    else if( op_type == EIGENVALSVECS )
+        calcEigenValsVecs( cov, eigenv );
+        */
+}
+
+void test_cornerMinEigenVal( int H, int W, char *src, const Mat& src_orig,
+                          Mat& dst, int blockSize, int ksize, int borderType )
+{
+    printf("HERE\n");
+    dst.create( cvSize( W, H ), CV_32F );
+    cornerEigenValsVecs( H, W, src, src_orig,
+                          dst, blockSize, ksize, 0/*MINEIGENVAL*/, 0, borderType );
+}
+
+
+
 void features( IplImage *image ) {
   int H = image->height;
   int W = image->width;
-  /*
-  char *src = img->imageData;
-  */
+  char *src = image->imageData;
 
   int maxCorners = 100;
   double qualityLevel = 0.03;
@@ -89,22 +259,31 @@ void features( IplImage *image ) {
   int blockSize = 3;
 
   Mat eig, tmp;
-  cornerMinEigenVal( image, eig, blockSize, 3 ); // TODO - tough part
+  test_cornerMinEigenVal( H, W, src, image, eig, blockSize, 3, BORDER_DEFAULT ); // TODO - tough part
 
   double maxVal = 0;
-  minMaxLoc( eig, 0, &maxVal, 0, 0, mask ); // TODO
-//  threshold( eig, eig, maxVal*qualityLevel, 0, THRESH_TOZERO ); // TODO
-  /*
+  //  threshold( eig, eig, maxVal*qualityLevel, 0, THRESH_TOZERO ); // TODO
+  for( int y = 1; y < H - 1; y++ ) {
+    for( int x = 1; x < W - 1; x++ ) {
+      float val = eig.at<float>(y, x);
+      if( val > maxVal )
+        maxVal = val;
+    }
+  }
+
+  //  minMaxLoc( eig, 0, &maxVal, 0, 0, mask ); // TODO
   double threshold = maxVal * qualityLevel;
   for( int y = 1; y < H - 1; y++ ) {
     for( int x = 1; x < W - 1; x++ ) {
       float val = eig.at<float>(y, x);
-      if(val < 0)
+      if(val < threshold)
         eig.at<float>(y, x) = 0;
     }
   }
-  */
+
   dilate( eig, tmp, Mat()); // TODO
+
+
 
   fpvector tmpCorners;
 
