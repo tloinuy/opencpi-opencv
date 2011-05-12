@@ -19,6 +19,7 @@ using namespace std;
 // -- rewrite (for C implementation)
 
 struct Point2f { float x, y; };
+struct Point2i { int x, y; };
 #define uchar unsigned char
 
 void rcc_calcOpticalFlowPyrLK(
@@ -29,7 +30,8 @@ void rcc_calcOpticalFlowPyrLK(
       vector<Point2f>& nextPts, // output port
       vector<uchar>& status, vector<float>& err, // output ports
       //int winSize = 10,
-      cv::Size winSize,
+      //cv::Size winSize,
+      int winHeight = 10, int winWidth = 10,
       int level = 0,
       double termMaxCount = 20,
       double termEpsilon = 0.3,
@@ -44,12 +46,12 @@ void rcc_calcOpticalFlowPyrLK(
     const float deriv1Scale = 0.5f/4.f;
     const float deriv2Scale = 0.25f/4.f;
     const int derivDepth = CV_32F;
-    Point2f halfWin;
-    halfWin.x = (winSize.width-1)*0.5f;
-    halfWin.y = (winSize.height-1)*0.5f;
+    struct Point2f halfWin;
+    halfWin.x = (winWidth-1)*0.5f;
+    halfWin.y = (winHeight-1)*0.5f;
 
     /*
-    CV_Assert( maxLevel >= 0 && winSize.width > 2 && winSize.height > 2 );
+    CV_Assert( maxLevel >= 0 && winWidth > 2 && winHeight > 2 );
     CV_Assert( prevImg.size() == nextImg.size() &&
         prevImg.type() == nextImg.type() );
     */
@@ -66,19 +68,24 @@ void rcc_calcOpticalFlowPyrLK(
     
     vector<cv::Mat> prevPyr, nextPyr;
 
+    /*
     int cn = prevImg.channels();
+    printf("cn: %d\n", cn); // cn=1
+    */
+    int cn = 1;
+    // TODO
     buildPyramid( prevImg, prevPyr, 0 );//maxLevel );
     buildPyramid( nextImg, nextPyr, 0 );//maxLevel );
     // I, dI/dx ~ Ix, dI/dy ~ Iy, d2I/dx2 ~ Ixx, d2I/dxdy ~ Ixy, d2I/dy2 ~ Iyy
-    cv::Mat derivIBuf((prevImg.rows + winSize.height*2),
-                  (prevImg.cols + winSize.width*2),
+    cv::Mat derivIBuf((prevImg.rows + winHeight*2),
+                  (prevImg.cols + winWidth*2),
                   CV_MAKETYPE(derivDepth, cn*6));
     // J, dJ/dx ~ Jx, dJ/dy ~ Jy
-    cv::Mat derivJBuf((prevImg.rows + winSize.height*2),
-                  (prevImg.cols + winSize.width*2),
+    cv::Mat derivJBuf((prevImg.rows + winHeight*2),
+                  (prevImg.cols + winWidth*2),
                   CV_MAKETYPE(derivDepth, cn*3));
     cv::Mat tempDerivBuf(prevImg.size(), CV_MAKETYPE(derivIBuf.type(), cn));
-    cv::Mat derivIWinBuf(winSize, derivIBuf.type());
+    cv::Mat derivIWinBuf(cv::Size(winWidth, winHeight), derivIBuf.type());
 
     /*
     if( (criteria.type & TermCriteria::COUNT) == 0 )
@@ -106,15 +113,18 @@ void rcc_calcOpticalFlowPyrLK(
         cv::Size imgSize = prevPyr[level].size();
 
         // TODO
+        // - redo gradient calculations
+        // - replace the .data .step .rows .cols calls (derivI, derivJ, derivIWinBuf)
+        // - remove std:: calls
         cv::Mat tempDeriv( imgSize, tempDerivBuf.type(), tempDerivBuf.data );
-        cv::Mat _derivI( imgSize.height + winSize.height*2,
-            imgSize.width + winSize.width*2,
+        cv::Mat _derivI( imgSize.height + winHeight*2,
+            imgSize.width + winWidth*2,
             derivIBuf.type(), derivIBuf.data );
-        cv::Mat _derivJ( imgSize.height + winSize.height*2,
-            imgSize.width + winSize.width*2,
+        cv::Mat _derivJ( imgSize.height + winHeight*2,
+            imgSize.width + winWidth*2,
             derivJBuf.type(), derivJBuf.data );
-        cv::Mat derivI(_derivI, cv::Rect(winSize.width, winSize.height, imgSize.width, imgSize.height));
-        cv::Mat derivJ(_derivJ, cv::Rect(winSize.width, winSize.height, imgSize.width, imgSize.height));
+        cv::Mat derivI(_derivI, cv::Rect(winWidth, winHeight, imgSize.width, imgSize.height));
+        cv::Mat derivJ(_derivJ, cv::Rect(winWidth, winHeight, imgSize.width, imgSize.height));
         CvMat cvderivI = _derivI;
         cvZero(&cvderivI);
         CvMat cvderivJ = _derivJ;
@@ -170,16 +180,16 @@ void rcc_calcOpticalFlowPyrLK(
             fromTo[k*2+1] = k*3 + 2;
         mixChannels(&tempDeriv, 1, &derivJ, 1, &fromTo[0], cn);
 
-        /*copyMakeBorder( derivI, _derivI, winSize.height, winSize.height,
-            winSize.width, winSize.width, BORDER_CONSTANT );
-        copyMakeBorder( derivJ, _derivJ, winSize.height, winSize.height,
-            winSize.width, winSize.width, BORDER_CONSTANT );*/
+        /*copyMakeBorder( derivI, _derivI, winHeight, winHeight,
+            winWidth, winWidth, BORDER_CONSTANT );
+        copyMakeBorder( derivJ, _derivJ, winHeight, winHeight,
+            winWidth, winWidth, BORDER_CONSTANT );*/
 
         for( size_t ptidx = 0; ptidx < npoints; ptidx++ )
         {
-            Point2f prevPt = {prevPts[ptidx].x*(float)(1./(1 << level)),
+            struct Point2f prevPt = {prevPts[ptidx].x*(float)(1./(1 << level)),
                               prevPts[ptidx].y*(float)(1./(1 << level))};
-            Point2f nextPt;
+            struct Point2f nextPt;
             if( level == 0 ) // maxLevel )
             {
                 nextPt = prevPt;
@@ -190,14 +200,14 @@ void rcc_calcOpticalFlowPyrLK(
             */
             nextPts[ptidx] = nextPt;
             
-            cv::Point2i iprevPt, inextPt;
+            struct Point2i iprevPt, inextPt;
             prevPt.x -= halfWin.x;
             prevPt.y -= halfWin.y;//-= halfWin;
-            iprevPt.x = cvFloor(prevPt.x);
-            iprevPt.y = cvFloor(prevPt.y);
+            iprevPt.x = (int) (prevPt.x);
+            iprevPt.y = (int) (prevPt.y);
 
-            if( iprevPt.x < -winSize.width || iprevPt.x >= derivI.cols ||
-                iprevPt.y < -winSize.height || iprevPt.y >= derivI.rows )
+            if( iprevPt.x < -winWidth || iprevPt.x >= derivI.cols ||
+                iprevPt.y < -winHeight || iprevPt.y >= derivI.rows )
             {
                 if( level == 0 )
                 {
@@ -219,13 +229,13 @@ void rcc_calcOpticalFlowPyrLK(
             
             // extract the patch from the first image
             int x, y;
-            for( y = 0; y < winSize.height; y++ )
+            for( y = 0; y < winHeight; y++ )
             {
                 const float* src = (const float*)(derivI.data +
                     (y + iprevPt.y)*derivI.step) + iprevPt.x*cnI;
                 float* dst = (float*)(derivIWinBuf.data + y*derivIWinBuf.step);
 
-                for( x = 0; x < winSize.width*cnI; x += cnI, src += cnI )
+                for( x = 0; x < winWidth*cnI; x += cnI, src += cnI )
                 {
                     float I = src[0]*w00 + src[cnI]*w01 + src[stepI]*w10 + src[stepI+cnI]*w11;
                     dst[x] = I;
@@ -255,7 +265,7 @@ void rcc_calcOpticalFlowPyrLK(
 
             double D = A11*A22 - A12*A12;
             double minEig = (A22 + A11 - std::sqrt((A11-A22)*(A11-A22) +
-                4.*A12*A12))/(2*winSize.width*winSize.height);
+                4.*A12*A12))/(2*winWidth*winHeight);
             err[ptidx] = (float)minEig;
 
             if( D < DBL_EPSILON )
@@ -269,15 +279,15 @@ void rcc_calcOpticalFlowPyrLK(
 
             nextPt.x -= halfWin.x;
             nextPt.y -= halfWin.y;//-= halfWin;
-            Point2f prevDelta;
+            struct Point2f prevDelta;
 
             for( int j = 0; j < termMaxCount; j++ )
             {
-                inextPt.x = cvFloor(nextPt.x);
-                inextPt.y = cvFloor(nextPt.y);
+                inextPt.x = (int) (nextPt.x);
+                inextPt.y = (int) (nextPt.y);
 
-                if( inextPt.x < -winSize.width || inextPt.x >= derivJ.cols ||
-                    inextPt.y < -winSize.height || inextPt.y >= derivJ.rows )
+                if( inextPt.x < -winWidth || inextPt.x >= derivJ.cols ||
+                    inextPt.y < -winHeight || inextPt.y >= derivJ.rows )
                 {
                     if( level == 0 )
                         status[ptidx] = false;
@@ -291,13 +301,13 @@ void rcc_calcOpticalFlowPyrLK(
 
                 double b1 = 0, b2 = 0, ib1 = 0, ib2 = 0;
 
-                for( y = 0; y < winSize.height; y++ )
+                for( y = 0; y < winHeight; y++ )
                 {
                     const float* src = (const float*)(derivJ.data +
                         (y + inextPt.y)*derivJ.step) + inextPt.x*cnJ;
                     const float* Ibuf = (float*)(derivIWinBuf.data + y*derivIWinBuf.step);
 
-                    for( x = 0; x < winSize.width; x++, src += cnJ, Ibuf += cnI )
+                    for( x = 0; x < winWidth; x++, src += cnJ, Ibuf += cnI )
                     {
                         double It = src[0]*w00 + src[cnJ]*w01 + src[stepJ]*w10 +
                                     src[stepJ+cnJ]*w11 - Ibuf[0];
@@ -314,7 +324,7 @@ void rcc_calcOpticalFlowPyrLK(
 
                 b1 = lambda1*ib1 + lambda2*b1;
                 b2 = lambda1*ib2 + lambda2*b2;
-                Point2f delta;
+                struct Point2f delta;
                 delta.x =  (float)((A12*b2 - A22*b1) * D);
                 delta.y =  (float)((A12*b1 - A11*b2) * D);
                 //delta = -delta;
@@ -710,9 +720,9 @@ void calcOpticalFlowAndMark(IplImage *imgA, IplImage *imgB, IplImage *imgC) {
     prevPts,
     nextPts,
     status,
-    err,
-    cvSize( win_size, win_size ),
-    0 // levels
+    err
+    //cvSize( win_size, win_size ),
+    //0 // levels
   );
 /*
   cv::test_calcOpticalFlowPyrLK(
