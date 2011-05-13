@@ -294,23 +294,30 @@ int main ( int argc, char* argv [ ] )
 
 		/* ---- Create connections --------------------------------- */
 
-    featuresIn.connect( minOut );
     minIn.connect( cornerOut );
-
+    featuresIn.connect( minOut );
     opticalFlowInFeature.connect( featuresOut );
+
+    printf(">>> DONE CONNECTING (feature)!\n");
+
     opticalFlowInAdx.connect( sobelAdxOut );
     opticalFlowInAdy.connect( sobelAdyOut );
     opticalFlowInAd2x.connect( sobelAd2xOut );
     opticalFlowInAd2y.connect( sobelAd2yOut );
     opticalFlowInAdxdy.connect( sobelAdxdyOut );
+
+    printf(">>> DONE CONNECTING (A)!\n");
+
     opticalFlowInBdx.connect( sobelBdxOut );
     opticalFlowInBdy.connect( sobelBdyOut );
 
-    printf(">>> DONE CONNECTING (half)!\n");
+    printf(">>> DONE CONNECTING (B)!\n");
 
     sobelAd2xIn.connect( sobelAdxOut );
     sobelAd2yIn.connect( sobelAdyOut );
     sobelAdxdyIn.connect( sobelAdxOut );
+
+    printf(">>> DONE CONNECTING (Sobel)!\n");
 
 		// Set external ports
 		OCPI::Container::ExternalPort
