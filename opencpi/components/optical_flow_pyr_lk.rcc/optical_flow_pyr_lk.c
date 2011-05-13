@@ -461,6 +461,8 @@ static RCCResult run(RCCWorker *self,
   // get number of features
   size_t npoints = in_feature->input.length / (2 * sizeof(float));
 
+  printf(">>> NPOINTS: %d\n", npoints);
+
   // calc optical flow
   calcOpticalFlowPyrLK( p->height, p->width,
     in_a->current.data, in_b->current.data,

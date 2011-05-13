@@ -13,6 +13,7 @@
 typedef uint8_t Pixel;      // the data type of pixels
 typedef int16_t PixelTemp;  // the data type for intermediate pixel math
 #define MAX UINT8_MAX       // the maximum pixel value
+#define FRAME_BYTES (p->height * p->width * sizeof(Pixel)) // pixels per frame
 
 SOBEL_32F_METHOD_DECLARATIONS;
 RCCDispatch sobel_32f = {
@@ -154,6 +155,8 @@ static RCCResult run(RCCWorker *self,
           (float *) out_32f->current.data,
           lines, p->xderiv );
 
+  c->advance( in, FRAME_BYTES );
+
   lineAt += lines;
   // next image
   if( lineAt == p->height ) {
@@ -165,6 +168,10 @@ static RCCResult run(RCCWorker *self,
   printf(">>> Xderiv: %d\n", p->xderiv);
 
   out->output.u.operation = in->input.u.operation;
-  out->output.length = produced * p->width * sizeof(float);
+  out->output.length = produced * p->width * sizeof(Pixel);
+
+  out_32f->output.u.operation = in->input.u.operation;
+  out_32f->output.length = produced * p->width * sizeof(float);
+
   return RCC_ADVANCE;
 }

@@ -411,22 +411,22 @@ int main ( int argc, char* argv [ ] )
 
     float *cornersB = (float *) malloc(ncorners * 2 * sizeof(float));
     memcpy(cornersB, idata, ilength);
-    myInput->release();
+    // myInput->release();
 
     myInput = myInStatus.getBuffer(opcode, idata, ilength, isEndOfData);
     char *status = (char *) malloc(ncorners * sizeof(char));
     memcpy(status, idata, ilength);
-    myInput->release();
+    // myInput->release();
 
     myInput = myInErr.getBuffer(opcode, idata, ilength, isEndOfData);
     float *err = (float *) malloc(ncorners * sizeof(float));
     memcpy(err, idata, ilength);
-    myInput->release();
+    // myInput->release();
 
     myInput = myInFeature.getBuffer(opcode, idata, ilength, isEndOfData);
     float *cornersA = (float *) malloc(ncorners * 2 * sizeof(float));
     memcpy(cornersA, idata, ilength);
-    myInput->release();
+    // myInput->release();
 
     // Draw flow
     for( size_t i = 0; i < ncorners; i++ ) {
