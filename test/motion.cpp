@@ -34,7 +34,7 @@ void rcc_calcOpticalFlowPyrLK(
       int winHeight = 10, int winWidth = 10,
       int level = 0,
       double termMaxCount = 20,
-      double termEpsilon = 0.3,
+      double termEpsilon = 0.01,
       double derivLambda = 0.5)
 {
     // init parameters
@@ -112,6 +112,20 @@ void rcc_calcOpticalFlowPyrLK(
         int k;
         cv::Size imgSize = prevPyr[level].size();
 
+        // substitute parameters
+        size_t derivIStep = 6 * cn * (W+2*winWidth) * sizeof(float);
+        size_t derivJStep = 3 * cn * (W+2*winWidth) * sizeof(float);
+        size_t derivIWinBufStep = 6 * cn * winWidth * sizeof(float);
+        size_t derivIElemSize1 = sizeof(float);
+        size_t derivJElemSize1 = sizeof(float);
+        size_t derivIRows = H+2*winHeight;
+        size_t derivJRows = H+2*winHeight;
+        size_t derivICols = W+2*winWidth;
+        size_t derivJCols = W+2*winWidth;
+
+        // derivatives
+        // populate derivI.data, derivJ.data
+
         // TODO
         // - redo gradient calculations
         // - replace the .data .step .rows .cols calls (derivI, derivJ, derivIWinBuf)
@@ -129,6 +143,12 @@ void rcc_calcOpticalFlowPyrLK(
         cvZero(&cvderivI);
         CvMat cvderivJ = _derivJ;
         cvZero(&cvderivJ);
+
+        // printf("derivI.elemSize1() or esz1: %d\n", derivI.elemSize1()); // 4 here
+        // printf("derivI.step: %d, %d\n", derivI.step, derivIStep);
+        // printf("derivIWinBuf.step: %d, %d\n", derivIWinBuf.step, derivIWinBufStep);
+        // printf("derivJ.step: %d\n", derivJ.step);
+        // printf("derivJ.step / (W+2*winWidth): %d\n", derivJ.step / (W+2*winWidth));
 
         vector<int> fromTo(cn*2);
         for( k = 0; k < cn; k++ )
@@ -206,8 +226,8 @@ void rcc_calcOpticalFlowPyrLK(
             iprevPt.x = (int) (prevPt.x);
             iprevPt.y = (int) (prevPt.y);
 
-            if( iprevPt.x < -winWidth || iprevPt.x >= derivI.cols ||
-                iprevPt.y < -winHeight || iprevPt.y >= derivI.rows )
+            if( iprevPt.x < -winWidth || iprevPt.x >= derivICols ||
+                iprevPt.y < -winHeight || iprevPt.y >= derivIRows )
             {
                 if( level == 0 )
                 {
@@ -221,8 +241,8 @@ void rcc_calcOpticalFlowPyrLK(
             float b = prevPt.y - iprevPt.y;
             float w00 = (1.f - a)*(1.f - b), w01 = a*(1.f - b);
             float w10 = (1.f - a)*b, w11 = a*b;
-            size_t stepI = derivI.step/derivI.elemSize1();
-            size_t stepJ = derivJ.step/derivJ.elemSize1();
+            size_t stepI = derivIStep/derivIElemSize1;
+            size_t stepJ = derivJStep/derivJElemSize1;
             int cnI = cn*6, cnJ = cn*3;
             double A11 = 0, A12 = 0, A22 = 0;
             double iA11 = 0, iA12 = 0, iA22 = 0;
@@ -232,8 +252,8 @@ void rcc_calcOpticalFlowPyrLK(
             for( y = 0; y < winHeight; y++ )
             {
                 const float* src = (const float*)(derivI.data +
-                    (y + iprevPt.y)*derivI.step) + iprevPt.x*cnI;
-                float* dst = (float*)(derivIWinBuf.data + y*derivIWinBuf.step);
+                    (y + iprevPt.y)*derivIStep) + iprevPt.x*cnI;
+                float* dst = (float*)(derivIWinBuf.data + y*derivIWinBufStep);
 
                 for( x = 0; x < winWidth*cnI; x += cnI, src += cnI )
                 {
@@ -286,8 +306,8 @@ void rcc_calcOpticalFlowPyrLK(
                 inextPt.x = (int) (nextPt.x);
                 inextPt.y = (int) (nextPt.y);
 
-                if( inextPt.x < -winWidth || inextPt.x >= derivJ.cols ||
-                    inextPt.y < -winHeight || inextPt.y >= derivJ.rows )
+                if( inextPt.x < -winWidth || inextPt.x >= derivJCols ||
+                    inextPt.y < -winHeight || inextPt.y >= derivJRows )
                 {
                     if( level == 0 )
                         status[ptidx] = false;
@@ -304,8 +324,8 @@ void rcc_calcOpticalFlowPyrLK(
                 for( y = 0; y < winHeight; y++ )
                 {
                     const float* src = (const float*)(derivJ.data +
-                        (y + inextPt.y)*derivJ.step) + inextPt.x*cnJ;
-                    const float* Ibuf = (float*)(derivIWinBuf.data + y*derivIWinBuf.step);
+                        (y + inextPt.y)*derivJStep) + inextPt.x*cnJ;
+                    const float* Ibuf = (float*)(derivIWinBuf.data + y*derivIWinBufStep);
 
                     for( x = 0; x < winWidth; x++, src += cnJ, Ibuf += cnI )
                     {
