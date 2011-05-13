@@ -15,6 +15,8 @@
 #include "highgui.h"
 #include "cv.h"
 
+static const double pi = 3.14159265358979323846;
+
 int main ( int argc, char* argv [ ] )
 {
   if(argc != 3) {
@@ -330,7 +332,8 @@ int main ( int argc, char* argv [ ] )
 			&myOutBdy = sobelBdyIn.connectExternal("aci_out_Bdy"),
 			&myIn = opticalFlowOut.connectExternal("aci_in"),
 			&myInStatus = opticalFlowStatusOut.connectExternal("aci_in_status"),
-			&myInErr = opticalFlowErrOut.connectExternal("aci_in_err");
+			&myInErr = opticalFlowErrOut.connectExternal("aci_in_err"),
+      &myInFeature = featuresOut.connectExternal("aci_in_feature");
 
     printf(">>> DONE CONNECTING (all)!\n");
 
@@ -400,36 +403,63 @@ int main ( int argc, char* argv [ ] )
 
     std::cout << "My input buffer is size " << ilength << std::endl;
 
-    myInput->release();
-
     // Get corners, statuses, errors
     size_t ncorners = ilength / (2 * sizeof(float));
     std::cout << "My corners " << ncorners << std::endl;
 
-    float *corners = (float *) malloc(ncorners * 2 * sizeof(float));
-    memcpy(corners, idata, ilength);
+    float *cornersB = (float *) malloc(ncorners * 2 * sizeof(float));
+    memcpy(cornersB, idata, ilength);
+    myInput->release();
 
     myInput = myInStatus.getBuffer(opcode, idata, ilength, isEndOfData);
     char *status = (char *) malloc(ncorners * sizeof(char));
     memcpy(status, idata, ilength);
+    myInput->release();
 
     myInput = myInErr.getBuffer(opcode, idata, ilength, isEndOfData);
     float *err = (float *) malloc(ncorners * sizeof(float));
     memcpy(err, idata, ilength);
+    myInput->release();
 
-    // Mark features
+    myInput = myInFeature.getBuffer(opcode, idata, ilength, isEndOfData);
+    float *cornersA = (float *) malloc(ncorners * 2 * sizeof(float));
+    memcpy(cornersA, idata, ilength);
+    myInput->release();
+
+    // Draw flow
     for( size_t i = 0; i < ncorners; i++ ) {
       if( status[i] == 0 || err[i] > 500 )
         continue;
-      float x = corners[2*i];
-      float y = corners[2*i+1];
-      CvPoint p = cvPoint( cvRound(x), cvRound(y) );
-      CvScalar color = CV_RGB(255, 0, 0);
-      cvCircle( imgC , p, 5, color, 2 );
+
+      double x0 = cornersA[2*i];
+      double y0 = cornersA[2*i+1];
+      CvPoint p = cvPoint( cvRound(x0), cvRound(y0) );
+      double x1 = cornersB[2*i];
+      double y1 = cornersB[2*i+1];
+      CvPoint q = cvPoint( cvRound(x1), cvRound(y1) );
+
+      CvScalar line_color = CV_RGB(255, 0, 0);
+      int line_thickness = 1;
+
+      // Main line (p -> q) lengthened
+      double angle = atan2( (double) y1 - y0, (double) x1 - x0 );
+      double hypotenuse = 1.5;
+      q.x = cvRound(x0 + 6 * hypotenuse * cos(angle));
+      q.y = cvRound(y0 + 6 * hypotenuse * sin(angle));
+      cvLine( imgC, p, q, line_color, line_thickness, CV_AA, 0 );
+
+      // Arrows
+      p.x = (int) (x0 + 5 * hypotenuse * cos(angle + pi / 4));
+      p.y = (int) (y0 + 5 * hypotenuse * sin(angle + pi / 4));
+      cvLine( imgC, p, q, line_color, line_thickness, CV_AA, 0 );
+
+      p.x = (int) (x0 + 5 * hypotenuse * cos(angle - pi / 4));
+      p.y = (int) (y0 + 5 * hypotenuse * sin(angle - pi / 4));
+      cvLine( imgC, p, q, line_color, line_thickness, CV_AA, 0 );
     }
 
-		// Save image
-		cvSaveImage("output_image.jpg", imgC);
+    // Save image
+    cvSaveImage("output_image.jpg", imgC);
 
 		std::cout << "\nOpenOCPI application is done\n" << std::endl;
 
@@ -453,7 +483,8 @@ int main ( int argc, char* argv [ ] )
     cvDestroyWindow( "Image B" );
     cvDestroyWindow( "Image Flow" );
 
-    free( corners );
+    free( cornersA );
+    free( cornersB );
     free( status );
     free( err );
 	}
