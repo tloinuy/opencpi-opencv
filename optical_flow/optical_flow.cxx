@@ -42,7 +42,7 @@ int main ( int argc, char* argv [ ] )
 		cvShowImage( "Input", img );
 
 		// Create an image for the output
-		IplImage* outImg = cvLoadImage( argv[1] );
+		IplImage* outImg = cvLoadImage( argv[1], 0 );
 		cvNamedWindow( "Output", CV_WINDOW_AUTOSIZE );
 
 		/* ---- Create the shared RCC container and application -------------- */
@@ -132,7 +132,7 @@ int main ( int argc, char* argv [ ] )
 			OCPI::Util::PVBool("xderiv", 1),
 			OCPI::Util::PVEnd
 		};
-		sobel_adx_worker.set_properties( corner_worker_pvlist );
+		sobel_adx_worker.set_properties( sobel_adx_worker_pvlist );
 		facades.push_back ( &sobel_adx_worker );
 
 		OCPI::Container::Port
@@ -204,8 +204,10 @@ int main ( int argc, char* argv [ ] )
     */
     float *p = (float *) idata;
     for(int i = 0; i < inImg->height * inImg->width; i++) {
-      unsigned char pc = (unsigned char) p[i];
-      outImg->imageData[i] = pc;
+      int pc = (int) p[i];
+      if(pc < 0) pc = 0;
+      if(pc > 255) pc = 255;
+      outImg->imageData[i] = (unsigned char) pc;
     }
     /*
     // Mark features

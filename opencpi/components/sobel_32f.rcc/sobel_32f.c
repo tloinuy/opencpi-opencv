@@ -74,10 +74,11 @@ update(int H, int W, Pixel *src, float *dst, unsigned lines, unsigned xderiv) {
       produced++;
     }
     else if( at > 1 ) {
+      Pixel *img_cur = img + at * W;
       if( xderiv )
-        doLineX( img - W, img, img + W, dst, W );
+        doLineX( img_cur - W, img_cur, img_cur + W, dst, W );
       else
-        doLineY( img - W, img, img + W, dst, W );
+        doLineY( img_cur - W, img_cur, img_cur + W, dst, W );
       dst += W;
       produced++;
     }
@@ -120,6 +121,7 @@ static RCCResult run(RCCWorker *self,
 
   printf(">>> PRODUCED: %d\n", produced);
   printf(">>> H, W: %d %d\n", p->height, p->width);
+  printf(">>> Xderiv: %d\n", p->xderiv);
 
   out->output.u.operation = in->input.u.operation;
   out->output.length = produced * p->width * sizeof(float);
