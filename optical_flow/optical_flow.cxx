@@ -17,33 +17,28 @@
 
 int main ( int argc, char* argv [ ] )
 {
-	if(argc != 2) {
-		std::cout << std::endl
-			<< "Usage: ./optical_flow <image_name>\n"
-			<< std::endl;
-		return 0;
-	}
+  if(argc != 3) {
+    printf("Usage: ./motion <imgA> <imgB>\n");
+    return 0;
+  }
+
+  // load images
+  IplImage* imgA_color = cvLoadImage( argv[1] );
+  IplImage* imgB_color = cvLoadImage( argv[2] );
+  IplImage* imgC = cvLoadImage( argv[1] ); // for marking flow
+
+  CvSize img_sz = cvGetSize( imgA_color );
+
+  IplImage* imgA = cvCreateImage( img_sz, IPL_DEPTH_8U, 1 );
+  IplImage* imgB = cvCreateImage( img_sz, IPL_DEPTH_8U, 1 );
+
+  cvConvertImage( imgA_color, imgA );
+  cvConvertImage( imgB_color, imgB );
 
 	try
 	{
 		( void ) argc;
 		( void ) argv;
-
-		/* ---- Load the image from file (grayscale) -------------- */
-		IplImage* inImg = cvLoadImage( argv[1], 0 );
-		// Create image with 8U pixel depth, single color channel
-		IplImage* img = cvCreateImage(
-				cvSize(inImg->width, inImg->height),
-				IPL_DEPTH_8U, 1
-		);
-		// Convert
-		cvConvertScale(inImg, img);
-		cvNamedWindow( "Input", CV_WINDOW_AUTOSIZE );
-		cvShowImage( "Input", img );
-
-		// Create an image for the output
-		IplImage* outImg = cvLoadImage( argv[1], 0 );
-		cvNamedWindow( "Output", CV_WINDOW_AUTOSIZE );
 
 		/* ---- Create the shared RCC container and application -------------- */
 		OCPI::Container::Interface* rcc_container ( Demo::get_rcc_interface ( ) );
@@ -67,15 +62,15 @@ int main ( int argc, char* argv [ ] )
 				"good_features_to_track" );
 
 		OCPI::Util::PValue features_worker_pvlist[] = {
-			OCPI::Util::PVULong("height", img->height),
-			OCPI::Util::PVULong("width", img->width),
+			OCPI::Util::PVULong("height", imgA->height),
+			OCPI::Util::PVULong("width", imgA->width),
       OCPI::Util::PVULong("max_corners", 50),
       OCPI::Util::PVDouble("quality_level", 0.03),
       OCPI::Util::PVDouble("min_distance", 5.0),
 			OCPI::Util::PVEnd
 		};
 		features_worker.set_properties( features_worker_pvlist );
-		// facades.push_back ( &features_worker );
+		facades.push_back ( &features_worker );
 
 		OCPI::Container::Port
 			&featuresOut = features_worker.port("out"),
@@ -89,12 +84,12 @@ int main ( int argc, char* argv [ ] )
 				"min_eigen_val" );
 
 		OCPI::Util::PValue min_worker_pvlist[] = {
-			OCPI::Util::PVULong("height", img->height),
-			OCPI::Util::PVULong("width", img->width),
+			OCPI::Util::PVULong("height", imgA->height),
+			OCPI::Util::PVULong("width", imgA->width),
 			OCPI::Util::PVEnd
 		};
 		min_worker.set_properties( min_worker_pvlist );
-		// facades.push_back ( &min_worker );
+		facades.push_back ( &min_worker );
 
 		OCPI::Container::Port
 			&minOut = min_worker.port("out"),
@@ -108,12 +103,12 @@ int main ( int argc, char* argv [ ] )
 				"corner_eigen_vals_vecs" );
 
 		OCPI::Util::PValue corner_worker_pvlist[] = {
-			OCPI::Util::PVULong("height", img->height),
-			OCPI::Util::PVULong("width", img->width),
+			OCPI::Util::PVULong("height", imgA->height),
+			OCPI::Util::PVULong("width", imgA->width),
 			OCPI::Util::PVEnd
 		};
 		corner_worker.set_properties( corner_worker_pvlist );
-		// facades.push_back ( &corner_worker );
+		facades.push_back ( &corner_worker );
 
 		OCPI::Container::Port
 			&cornerOut = corner_worker.port("out"),
@@ -127,8 +122,8 @@ int main ( int argc, char* argv [ ] )
 				"sobel_32f" );
 
 		OCPI::Util::PValue sobel_adx_worker_pvlist[] = {
-			OCPI::Util::PVULong("height", img->height),
-			OCPI::Util::PVULong("width", img->width),
+			OCPI::Util::PVULong("height", imgA->height),
+			OCPI::Util::PVULong("width", imgA->width),
 			OCPI::Util::PVBool("xderiv", 1),
 			OCPI::Util::PVEnd
 		};
@@ -139,17 +134,198 @@ int main ( int argc, char* argv [ ] )
 			&sobelAdxOut = sobel_adx_worker.port("out"),
 			&sobelAdxIn = sobel_adx_worker.port("in");
 
+    // sobel_32f (A_dy)
+		Demo::WorkerFacade sobel_ady_worker (
+        "Sobel 32f A_dy (RCC)",
+				rcc_application,
+				Demo::get_rcc_uri ( "sobel_32f" ).c_str ( ),
+				"sobel_32f" );
+
+		OCPI::Util::PValue sobel_ady_worker_pvlist[] = {
+			OCPI::Util::PVULong("height", imgA->height),
+			OCPI::Util::PVULong("width", imgA->width),
+			OCPI::Util::PVBool("xderiv", 0),
+			OCPI::Util::PVEnd
+		};
+		sobel_ady_worker.set_properties( sobel_ady_worker_pvlist );
+		facades.push_back ( &sobel_ady_worker );
+
+		OCPI::Container::Port
+			&sobelAdyOut = sobel_ady_worker.port("out"),
+			&sobelAdyIn = sobel_ady_worker.port("in");
+
+    // sobel_32f (A_d2x)
+		Demo::WorkerFacade sobel_ad2x_worker (
+        "Sobel 32f A_d2x (RCC)",
+				rcc_application,
+				Demo::get_rcc_uri ( "sobel_32f" ).c_str ( ),
+				"sobel_32f" );
+
+		OCPI::Util::PValue sobel_ad2x_worker_pvlist[] = {
+			OCPI::Util::PVULong("height", imgA->height),
+			OCPI::Util::PVULong("width", imgA->width),
+			OCPI::Util::PVBool("xderiv", 1),
+			OCPI::Util::PVEnd
+		};
+		sobel_ad2x_worker.set_properties( sobel_ad2x_worker_pvlist );
+		facades.push_back ( &sobel_ad2x_worker );
+
+		OCPI::Container::Port
+			&sobelAd2xOut = sobel_ad2x_worker.port("out"),
+			&sobelAd2xIn = sobel_ad2x_worker.port("in");
+
+    // sobel_32f (A_d2y)
+		Demo::WorkerFacade sobel_ad2y_worker (
+        "Sobel 32f A_d2y (RCC)",
+				rcc_application,
+				Demo::get_rcc_uri ( "sobel_32f" ).c_str ( ),
+				"sobel_32f" );
+
+		OCPI::Util::PValue sobel_ad2y_worker_pvlist[] = {
+			OCPI::Util::PVULong("height", imgA->height),
+			OCPI::Util::PVULong("width", imgA->width),
+			OCPI::Util::PVBool("xderiv", 0),
+			OCPI::Util::PVEnd
+		};
+		sobel_ad2y_worker.set_properties( sobel_ad2y_worker_pvlist );
+		facades.push_back ( &sobel_ad2y_worker );
+
+		OCPI::Container::Port
+			&sobelAd2yOut = sobel_ad2y_worker.port("out"),
+			&sobelAd2yIn = sobel_ad2y_worker.port("in");
+
+    // sobel_32f (A_dxdy)
+		Demo::WorkerFacade sobel_adxdy_worker (
+        "Sobel 32f A_dxdy (RCC)",
+				rcc_application,
+				Demo::get_rcc_uri ( "sobel_32f" ).c_str ( ),
+				"sobel_32f" );
+
+		OCPI::Util::PValue sobel_adxdy_worker_pvlist[] = {
+			OCPI::Util::PVULong("height", imgA->height),
+			OCPI::Util::PVULong("width", imgA->width),
+			OCPI::Util::PVBool("xderiv", 0),
+			OCPI::Util::PVEnd
+		};
+		sobel_adxdy_worker.set_properties( sobel_adxdy_worker_pvlist );
+		facades.push_back ( &sobel_adxdy_worker );
+
+		OCPI::Container::Port
+			&sobelAdxdyOut = sobel_adxdy_worker.port("out"),
+			&sobelAdxdyIn = sobel_adxdy_worker.port("in");
+
+    // sobel_32f (B_dx)
+		Demo::WorkerFacade sobel_bdx_worker (
+        "Sobel 32f B_dx (RCC)",
+				rcc_application,
+				Demo::get_rcc_uri ( "sobel_32f" ).c_str ( ),
+				"sobel_32f" );
+
+		OCPI::Util::PValue sobel_bdx_worker_pvlist[] = {
+			OCPI::Util::PVULong("height", imgA->height),
+			OCPI::Util::PVULong("width", imgA->width),
+			OCPI::Util::PVBool("xderiv", 1),
+			OCPI::Util::PVEnd
+		};
+		sobel_bdx_worker.set_properties( sobel_bdx_worker_pvlist );
+		facades.push_back ( &sobel_bdx_worker );
+
+		OCPI::Container::Port
+			&sobelBdxOut = sobel_bdx_worker.port("out"),
+			&sobelBdxIn = sobel_bdx_worker.port("in");
+
+    // sobel_32f (B_dy)
+		Demo::WorkerFacade sobel_bdy_worker (
+        "Sobel 32f B_dy (RCC)",
+				rcc_application,
+				Demo::get_rcc_uri ( "sobel_32f" ).c_str ( ),
+				"sobel_32f" );
+
+		OCPI::Util::PValue sobel_bdy_worker_pvlist[] = {
+			OCPI::Util::PVULong("height", imgA->height),
+			OCPI::Util::PVULong("width", imgA->width),
+			OCPI::Util::PVBool("xderiv", 0),
+			OCPI::Util::PVEnd
+		};
+		sobel_bdy_worker.set_properties( sobel_bdy_worker_pvlist );
+		facades.push_back ( &sobel_bdy_worker );
+
+		OCPI::Container::Port
+			&sobelBdyOut = sobel_bdy_worker.port("out"),
+			&sobelBdyIn = sobel_bdy_worker.port("in");
+
+    // optical_flow_pyr_lk
+		Demo::WorkerFacade optical_flow_worker (
+        "Optical Flow Pyr LK (RCC)",
+				rcc_application,
+				Demo::get_rcc_uri ( "optical_flow_pyr_lk" ).c_str ( ),
+				"optical_flow_pyr_lk" );
+
+		OCPI::Util::PValue optical_flow_worker_pvlist[] = {
+			OCPI::Util::PVULong("height", imgA->height),
+			OCPI::Util::PVULong("width", imgA->width),
+			OCPI::Util::PVULong("win_height", 10),
+			OCPI::Util::PVULong("win_width", 10),
+			OCPI::Util::PVULong("level", 0),
+			OCPI::Util::PVULong("term_max_count", 20),
+			OCPI::Util::PVDouble("term_epsilon", 0.01),
+			OCPI::Util::PVDouble("deriv_lambda", 0.5),
+			OCPI::Util::PVEnd
+		};
+		optical_flow_worker.set_properties( optical_flow_worker_pvlist );
+		facades.push_back ( &optical_flow_worker );
+
+		OCPI::Container::Port
+			&opticalFlowInA = optical_flow_worker.port("in_A"),
+			&opticalFlowInAdx = optical_flow_worker.port("in_Adx"),
+			&opticalFlowInAdy = optical_flow_worker.port("in_Ady"),
+			&opticalFlowInAd2x = optical_flow_worker.port("in_Ad2x"),
+			&opticalFlowInAd2y = optical_flow_worker.port("in_Ad2y"),
+			&opticalFlowInAdxdy = optical_flow_worker.port("in_Adxdy"),
+			&opticalFlowInB = optical_flow_worker.port("in_B"),
+			&opticalFlowInBdx = optical_flow_worker.port("in_Bdx"),
+			&opticalFlowInBdy = optical_flow_worker.port("in_Bdy"),
+			&opticalFlowInFeature = optical_flow_worker.port("in_feature"),
+			&opticalFlowOut = optical_flow_worker.port("out"),
+			&opticalFlowStatusOut = optical_flow_worker.port("out_status"),
+			&opticalFlowErrOut = optical_flow_worker.port("out_err");
+
+    printf(">>> DONE INIT!\n");
+
 		/* ---- Create connections --------------------------------- */
 
-    // featuresIn.connect( minOut );
-    // minIn.connect( cornerOut );
+    featuresIn.connect( minOut );
+    minIn.connect( cornerOut );
+
+    opticalFlowInFeature.connect( featuresOut );
+    opticalFlowInAdx.connect( sobelAdxOut );
+    opticalFlowInAdy.connect( sobelAdyOut );
+    opticalFlowInAd2x.connect( sobelAd2xOut );
+    opticalFlowInAd2y.connect( sobelAd2yOut );
+    opticalFlowInAdxdy.connect( sobelAdxdyOut );
+    opticalFlowInBdx.connect( sobelBdxOut );
+    opticalFlowInBdy.connect( sobelBdyOut );
+
+    printf(">>> DONE CONNECTING (half)!\n");
+
+    sobelAd2xIn.connect( sobelAdxOut );
+    sobelAd2yIn.connect( sobelAdyOut );
+    sobelAdxdyIn.connect( sobelAdxOut );
 
 		// Set external ports
 		OCPI::Container::ExternalPort
-			&myOut = sobelAdxIn.connectExternal("aci_out"),
-			&myIn = sobelAdxOut.connectExternal("aci_in");
+			&myOutFeature = cornerIn.connectExternal("aci_out"),
+			&myOutA = opticalFlowInA.connectExternal("aci_out_A"),
+			&myOutAdx = sobelAdxIn.connectExternal("aci_out_Adx"),
+			&myOutAdy = sobelAdyIn.connectExternal("aci_out_Ady"),
+			&myOutB = opticalFlowInB.connectExternal("aci_out_B"),
+			&myOutBdx = sobelBdxIn.connectExternal("aci_out_Bdx"),
+			&myOutBdy = sobelBdyIn.connectExternal("aci_out_Bdy"),
+			&myIn = opticalFlowOut.connectExternal("aci_in"),
+			&myInStatus = opticalFlowStatusOut.connectExternal("aci_in_status"),
+			&myInErr = opticalFlowErrOut.connectExternal("aci_in_err");
 
-    printf(">>> DONE CONNECTING!\n");
+    printf(">>> DONE CONNECTING (all)!\n");
 
 		/* ---- Start all of the workers ------------------------------------- */
 		std::for_each ( facades.rbegin ( ),
@@ -175,68 +351,104 @@ int main ( int argc, char* argv [ ] )
 		bool isEndOfData = false;
 
     // Set output data
-    OCPI::Container::ExternalBuffer* myOutput = myOut.getBuffer(odata, olength);
-    memcpy(odata, img->imageData, img->height * img->width);
-    myOutput->put(0, img->height * img->width, false);
+    OCPI::Container::ExternalBuffer* myOutput;
+    
+    myOutput = myOutFeature.getBuffer(odata, olength);
+    memcpy(odata, imgA->imageData, imgA->height * imgA->width);
+    myOutput->put(0, imgA->height * imgA->width, false);
+
+    myOutput = myOutA.getBuffer(odata, olength);
+    memcpy(odata, imgA->imageData, imgA->height * imgA->width);
+    myOutput->put(0, imgA->height * imgA->width, false);
+
+    myOutput = myOutAdx.getBuffer(odata, olength);
+    memcpy(odata, imgA->imageData, imgA->height * imgA->width);
+    myOutput->put(0, imgA->height * imgA->width, false);
+
+    myOutput = myOutAdy.getBuffer(odata, olength);
+    memcpy(odata, imgA->imageData, imgA->height * imgA->width);
+    myOutput->put(0, imgA->height * imgA->width, false);
+
+    myOutput = myOutB.getBuffer(odata, olength);
+    memcpy(odata, imgB->imageData, imgB->height * imgB->width);
+    myOutput->put(0, imgB->height * imgB->width, false);
+
+    myOutput = myOutBdx.getBuffer(odata, olength);
+    memcpy(odata, imgB->imageData, imgB->height * imgB->width);
+    myOutput->put(0, imgB->height * imgB->width, false);
+
+    myOutput = myOutBdy.getBuffer(odata, olength);
+    memcpy(odata, imgB->imageData, imgB->height * imgB->width);
+    myOutput->put(0, imgB->height * imgB->width, false);
 
     std::cout << "My output buffer is size " << olength << std::endl;
 
     // Call dispatch so the worker can "act" on its input data
-    std::for_each ( interfaces.begin(), interfaces.end(), Demo::dispatch );
-    std::for_each ( interfaces.begin(), interfaces.end(), Demo::dispatch );
-    std::for_each ( interfaces.begin(), interfaces.end(), Demo::dispatch );
+    for( int i = 0; i < 20; i++ )
+      std::for_each ( interfaces.begin(), interfaces.end(), Demo::dispatch );
 
     // Get input data
-    OCPI::Container::ExternalBuffer* myInput = myIn.getBuffer(opcode, idata,
-      ilength, isEndOfData);
+    OCPI::Container::ExternalBuffer* myInput;
+    myInput = myIn.getBuffer(opcode, idata, ilength, isEndOfData);
 
     std::cout << "My input buffer is size " << ilength << std::endl;
 
     myInput->release();
 
-    // experiment with 32f output
-    /*
-		IplImage* outImg32f = cvCreateImage(
-				cvSize(inImg->width, inImg->height),
-				IPL_DEPTH_32F, 1
-		);
-    memcpy(outImg32f->imageData, idata, inImg->height * inImg->width * sizeof(float));
-    */
-    float *p = (float *) idata;
-    for(int i = 0; i < inImg->height * inImg->width; i++) {
-      int pc = (int) p[i];
-      if(pc < 0) pc = 0;
-      if(pc > 255) pc = 255;
-      outImg->imageData[i] = (unsigned char) pc;
-    }
-    /*
-    // Mark features
+    // Get corners, statuses, errors
     size_t ncorners = ilength / (2 * sizeof(float));
-    float *corners = (float *) idata;
     std::cout << "My corners " << ncorners << std::endl;
-    for( int i = 0; i < ncorners; i++ ) {
+
+    float *corners = (float *) malloc(ncorners * 2 * sizeof(float));
+    memcpy(corners, idata, ilength);
+
+    myInput = myInStatus.getBuffer(opcode, idata, ilength, isEndOfData);
+    char *status = (char *) malloc(ncorners * sizeof(char));
+    memcpy(status, idata, ilength);
+
+    myInput = myInErr.getBuffer(opcode, idata, ilength, isEndOfData);
+    float *err = (float *) malloc(ncorners * sizeof(float));
+    memcpy(err, idata, ilength);
+
+    // Mark features
+    for( size_t i = 0; i < ncorners; i++ ) {
+      if( status[i] == 0 || err[i] > 500 )
+        continue;
       float x = corners[2*i];
       float y = corners[2*i+1];
       CvPoint p = cvPoint( cvRound(x), cvRound(y) );
       CvScalar color = CV_RGB(255, 0, 0);
-      cvCircle( outImg, p, 5, color, 2 );
+      cvCircle( imgC , p, 5, color, 2 );
     }
-    */
 
-		// Show image
-		cvShowImage( "Output", outImg );
+		// Save image
+		cvSaveImage("output_image.jpg", imgC);
 
 		std::cout << "\nOpenOCPI application is done\n" << std::endl;
 
-		// Save image
-		cvSaveImage("output_image.jpg", outImg);
+    // display
+    cvNamedWindow( "Image A", CV_WINDOW_AUTOSIZE );
+    cvNamedWindow( "Image B", CV_WINDOW_AUTOSIZE );
+    cvNamedWindow( "Image Flow", CV_WINDOW_AUTOSIZE );
 
-		// Cleanup
-		cvWaitKey(0);
-		cvReleaseImage( &img );
-		cvReleaseImage( &outImg );
-		cvDestroyWindow( "Input" );
-		cvDestroyWindow( "Output" );
+    cvShowImage( "Image A", imgA );
+    cvShowImage( "Image B", imgB );
+    cvShowImage( "Image Flow", imgC );
+
+    // cleanup
+    cvWaitKey(0);
+
+    cvReleaseImage( &imgA );
+    cvReleaseImage( &imgB );
+    cvReleaseImage( &imgC );
+
+    cvDestroyWindow( "Image A" );
+    cvDestroyWindow( "Image B" );
+    cvDestroyWindow( "Image Flow" );
+
+    free( corners );
+    free( status );
+    free( err );
 	}
 	catch ( const std::string& s )
 	{
