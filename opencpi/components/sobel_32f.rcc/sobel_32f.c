@@ -11,6 +11,8 @@
 #include <stdlib.h>
 
 typedef uint8_t Pixel;      // the data type of pixels
+typedef int16_t PixelTemp;  // the data type for intermediate pixel math
+#define MAX UINT8_MAX       // the maximum pixel value
 
 SOBEL_32F_METHOD_DECLARATIONS;
 RCCDispatch sobel_32f = {
@@ -20,7 +22,20 @@ RCCDispatch sobel_32f = {
 
 // X derivative
 inline static void
-doLineX(Pixel *l0, Pixel *l1, Pixel *l2, float *out, unsigned width) {
+doLineX(Pixel *l0, Pixel *l1, Pixel *l2, Pixel *out, unsigned width) {
+  unsigned i; // don't depend on c99 yet
+  for (i = 1; i < width - 1; i++) {
+    PixelTemp t =
+      -1 * l0[i-1] + 1 * l0[i+1] +
+      -2 * l1[i-1] + 2 * l1[i+1] +
+      -1 * l2[i-1] + 1 * l2[i+1];
+    out[i] = t < 0 ? 0 : (t > MAX ? MAX : t);
+  }
+  out[0] = out[width-1] = 0; // boundary conditions
+}
+
+inline static void
+doLineX_32f(Pixel *l0, Pixel *l1, Pixel *l2, float *out, unsigned width) {
   unsigned i; // don't depend on c99 yet
   for (i = 1; i < width - 1; i++) {
     float t = (float)
@@ -34,7 +49,20 @@ doLineX(Pixel *l0, Pixel *l1, Pixel *l2, float *out, unsigned width) {
 
 // Y derivative
 inline static void
-doLineY(Pixel *l0, Pixel *l1, Pixel *l2, float *out, unsigned width) {
+doLineY(Pixel *l0, Pixel *l1, Pixel *l2, Pixel *out, unsigned width) {
+  unsigned i; // don't depend on c99 yet
+  for (i = 1; i < width - 1; i++) {
+    PixelTemp t = 
+      -1 * l0[i-1] + 1 * l2[i-1] +
+      -2 * l0[i]   + 2 * l2[i]   +
+      -1 * l0[i+1] + 1 * l2[i+1];
+    out[i] = t < 0 ? 0 : (t > MAX ? MAX : t);
+  }
+  out[0] = out[width-1] = 0; // boundary conditions
+}
+
+inline static void
+doLineY_32f(Pixel *l0, Pixel *l1, Pixel *l2, float *out, unsigned width) {
   unsigned i; // don't depend on c99 yet
   for (i = 1; i < width - 1; i++) {
     float t = (float)
@@ -50,7 +78,8 @@ unsigned lineAt = 0;
 Pixel *img = NULL;
 
 static unsigned 
-update(int H, int W, Pixel *src, float *dst, unsigned lines, unsigned xderiv) {
+update(int H, int W, Pixel *src, Pixel *dst, float *dst_32f,
+        unsigned lines, unsigned xderiv) {
   if( !img ) {
     img = malloc(H * W * sizeof(Pixel));
   }
@@ -69,24 +98,33 @@ update(int H, int W, Pixel *src, float *dst, unsigned lines, unsigned xderiv) {
     // at = 0 begin (zero lines)
     if( at == 1 ) {
       // first line
-      memset(dst, 0, sizeof(float) * W);
+      memset(dst, 0, sizeof(Pixel) * W);
+      memset(dst_32f, 0, sizeof(float) * W);
       dst += W;
+      dst_32f += W;
       produced++;
     }
     else if( at > 1 ) {
       Pixel *img_cur = img + at * W;
-      if( xderiv )
+      if( xderiv ) {
         doLineX( img_cur - W, img_cur, img_cur + W, dst, W );
-      else
+        doLineX_32f( img_cur - W, img_cur, img_cur + W, dst_32f, W );
+      }
+      else {
         doLineY( img_cur - W, img_cur, img_cur + W, dst, W );
+        doLineY_32f( img_cur - W, img_cur, img_cur + W, dst_32f, W );
+      }
       dst += W;
+      dst_32f += W;
       produced++;
     }
 
     if( at == H - 1 ) {
       // end (two lines)
-      memset(dst, 0, sizeof(float) * W);
+      memset(dst, 0, sizeof(Pixel) * W);
+      memset(dst_32f, 0, sizeof(float) * W);
       dst += W;
+      dst_32f += W;
       produced++;
     }
   }
@@ -105,13 +143,16 @@ static RCCResult run(RCCWorker *self,
   ( void ) newRunCondition;
   Sobel_32fProperties *p = self->properties;
   RCCPort *in = &self->ports[SOBEL_32F_IN],
-          *out = &self->ports[SOBEL_32F_OUT];
+          *out = &self->ports[SOBEL_32F_OUT],
+          *out_32f = &self->ports[SOBEL_32F_OUT_32F];
   const RCCContainer *c = self->container;
 
   // update and produce gradients
   unsigned lines = in->input.length / p->width;
   unsigned produced = update( p->height, p->width, in->current.data,
-          (float *) out->current.data, lines, p->xderiv );
+          (Pixel *) out->current.data,
+          (float *) out_32f->current.data,
+          lines, p->xderiv );
 
   lineAt += lines;
   // next image

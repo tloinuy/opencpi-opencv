@@ -9,6 +9,9 @@
     <xi:include href="image8_lines.xml"/>
   </DataInterfaceSpec>
   <DataInterfaceSpec Name="out" Producer="true">
+    <xi:include href="image8_lines.xml"/>
+  </DataInterfaceSpec>
+  <DataInterfaceSpec Name="out_32f" Producer="true">
     <xi:include href="image32f_lines.xml"/>
   </DataInterfaceSpec>
 </ComponentSpec>

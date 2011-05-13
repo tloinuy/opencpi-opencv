@@ -133,7 +133,8 @@ int main ( int argc, char* argv [ ] )
 		facades.push_back ( &sobel_adx_worker );
 
 		OCPI::Container::Port
-			&sobelAdxOut = sobel_adx_worker.port("out"),
+			&sobelAdxOut = sobel_adx_worker.port("out_32f"),
+			&sobelAdx8UOut = sobel_adx_worker.port("out"),
 			&sobelAdxIn = sobel_adx_worker.port("in");
 
     // sobel_32f (A_dy)
@@ -153,7 +154,8 @@ int main ( int argc, char* argv [ ] )
 		facades.push_back ( &sobel_ady_worker );
 
 		OCPI::Container::Port
-			&sobelAdyOut = sobel_ady_worker.port("out"),
+			&sobelAdyOut = sobel_ady_worker.port("out_32f"),
+			&sobelAdy8UOut = sobel_ady_worker.port("out"),
 			&sobelAdyIn = sobel_ady_worker.port("in");
 
     // sobel_32f (A_d2x)
@@ -173,7 +175,7 @@ int main ( int argc, char* argv [ ] )
 		facades.push_back ( &sobel_ad2x_worker );
 
 		OCPI::Container::Port
-			&sobelAd2xOut = sobel_ad2x_worker.port("out"),
+			&sobelAd2xOut = sobel_ad2x_worker.port("out_32f"),
 			&sobelAd2xIn = sobel_ad2x_worker.port("in");
 
     // sobel_32f (A_d2y)
@@ -193,7 +195,7 @@ int main ( int argc, char* argv [ ] )
 		facades.push_back ( &sobel_ad2y_worker );
 
 		OCPI::Container::Port
-			&sobelAd2yOut = sobel_ad2y_worker.port("out"),
+			&sobelAd2yOut = sobel_ad2y_worker.port("out_32f"),
 			&sobelAd2yIn = sobel_ad2y_worker.port("in");
 
     // sobel_32f (A_dxdy)
@@ -213,7 +215,7 @@ int main ( int argc, char* argv [ ] )
 		facades.push_back ( &sobel_adxdy_worker );
 
 		OCPI::Container::Port
-			&sobelAdxdyOut = sobel_adxdy_worker.port("out"),
+			&sobelAdxdyOut = sobel_adxdy_worker.port("out_32f"),
 			&sobelAdxdyIn = sobel_adxdy_worker.port("in");
 
     // sobel_32f (B_dx)
@@ -233,7 +235,7 @@ int main ( int argc, char* argv [ ] )
 		facades.push_back ( &sobel_bdx_worker );
 
 		OCPI::Container::Port
-			&sobelBdxOut = sobel_bdx_worker.port("out"),
+			&sobelBdxOut = sobel_bdx_worker.port("out_32f"),
 			&sobelBdxIn = sobel_bdx_worker.port("in");
 
     // sobel_32f (B_dy)
@@ -253,7 +255,7 @@ int main ( int argc, char* argv [ ] )
 		facades.push_back ( &sobel_bdy_worker );
 
 		OCPI::Container::Port
-			&sobelBdyOut = sobel_bdy_worker.port("out"),
+			&sobelBdyOut = sobel_bdy_worker.port("out_32f"),
 			&sobelBdyIn = sobel_bdy_worker.port("in");
 
     // optical_flow_pyr_lk
@@ -315,9 +317,9 @@ int main ( int argc, char* argv [ ] )
 
     printf(">>> DONE CONNECTING (B)!\n");
 
-    sobelAd2xIn.connect( sobelAdxOut );
-    sobelAd2yIn.connect( sobelAdyOut );
-    sobelAdxdyIn.connect( sobelAdxOut );
+    sobelAd2xIn.connect( sobelAdx8UOut );
+    sobelAd2yIn.connect( sobelAdy8UOut );
+    sobelAdxdyIn.connect( sobelAdx8UOut );
 
     printf(">>> DONE CONNECTING (Sobel)!\n");
 
