@@ -22,6 +22,39 @@ struct Point2f { float x, y; };
 struct Point2i { int x, y; };
 #define uchar unsigned char
 
+float *derivIData;
+float *derivJData;
+
+void calc_deriv(int H, int W, int winHeight, int winWidth, const uchar* src) {
+  derivIData = (float *) malloc((H+2*winHeight)*(W+2*winWidth)*sizeof(float)*6);
+  derivJData = (float *) malloc((H+2*winHeight)*(W+2*winWidth)*sizeof(float)*3);
+
+  float *tmp = (float *) malloc(H*W*sizeof(float));
+  float *tmp2 = (float *) malloc(H*W*sizeof(float));
+
+  size_t i, j;
+  // dx
+  for(i = 1; i < H - 1; i++) {
+    const uchar *l0 = src + (i-1)*W;
+    const uchar *l1 = src + i*W;
+    const uchar *l2 = src + (i+1)*W;
+    for(j = 1; j < W - 1; j++) {
+      int ind = i*W + j;
+      
+      tmp[i*W+j] = (float) l0[j+1] + 2*l1[j+1] + l2[j+1] - l0[j-1] - 2*l1[j-1] - l2[j-1];
+    }
+
+  }
+
+
+  // deriv1Scale = 1/8
+  // deriv2Scale = 1/16
+  // populate + test
+
+  free( tmp );
+  free( tmp2 );
+}
+
 void rcc_calcOpticalFlowPyrLK(
       int H, int W,
       //const char *prevImg, const char *nextImg, // input ports
