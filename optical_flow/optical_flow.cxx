@@ -1,3 +1,23 @@
+/*
+=====
+Copyright (C) 2011 Massachusetts Institute of Technology
+
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+======
+*/
 
 #include "OcpiWorker.h"
 #include "OcpiPValue.h"
@@ -123,13 +143,13 @@ int main ( int argc, char* argv [ ] )
 				Demo::get_rcc_uri ( "sobel_32f" ).c_str ( ),
 				"sobel_32f" );
 
-		OCPI::Util::PValue sobel_adx_worker_pvlist[] = {
+		OCPI::Util::PValue sobel_dx_worker_pvlist[] = {
 			OCPI::Util::PVULong("height", imgA->height),
 			OCPI::Util::PVULong("width", imgA->width),
 			OCPI::Util::PVBool("xderiv", 1),
 			OCPI::Util::PVEnd
 		};
-		sobel_adx_worker.set_properties( sobel_adx_worker_pvlist );
+		sobel_adx_worker.set_properties( sobel_dx_worker_pvlist );
 		facades.push_back ( &sobel_adx_worker );
 
 		OCPI::Container::Port
@@ -144,13 +164,13 @@ int main ( int argc, char* argv [ ] )
 				Demo::get_rcc_uri ( "sobel_32f" ).c_str ( ),
 				"sobel_32f" );
 
-		OCPI::Util::PValue sobel_ady_worker_pvlist[] = {
+		OCPI::Util::PValue sobel_dy_worker_pvlist[] = {
 			OCPI::Util::PVULong("height", imgA->height),
 			OCPI::Util::PVULong("width", imgA->width),
 			OCPI::Util::PVBool("xderiv", 0),
 			OCPI::Util::PVEnd
 		};
-		sobel_ady_worker.set_properties( sobel_ady_worker_pvlist );
+		sobel_ady_worker.set_properties( sobel_dy_worker_pvlist );
 		facades.push_back ( &sobel_ady_worker );
 
 		OCPI::Container::Port
@@ -165,13 +185,7 @@ int main ( int argc, char* argv [ ] )
 				Demo::get_rcc_uri ( "sobel_32f" ).c_str ( ),
 				"sobel_32f" );
 
-		OCPI::Util::PValue sobel_ad2x_worker_pvlist[] = {
-			OCPI::Util::PVULong("height", imgA->height),
-			OCPI::Util::PVULong("width", imgA->width),
-			OCPI::Util::PVBool("xderiv", 1),
-			OCPI::Util::PVEnd
-		};
-		sobel_ad2x_worker.set_properties( sobel_ad2x_worker_pvlist );
+		sobel_ad2x_worker.set_properties( sobel_dx_worker_pvlist );
 		facades.push_back ( &sobel_ad2x_worker );
 
 		OCPI::Container::Port
@@ -185,13 +199,7 @@ int main ( int argc, char* argv [ ] )
 				Demo::get_rcc_uri ( "sobel_32f" ).c_str ( ),
 				"sobel_32f" );
 
-		OCPI::Util::PValue sobel_ad2y_worker_pvlist[] = {
-			OCPI::Util::PVULong("height", imgA->height),
-			OCPI::Util::PVULong("width", imgA->width),
-			OCPI::Util::PVBool("xderiv", 0),
-			OCPI::Util::PVEnd
-		};
-		sobel_ad2y_worker.set_properties( sobel_ad2y_worker_pvlist );
+		sobel_ad2y_worker.set_properties( sobel_dy_worker_pvlist );
 		facades.push_back ( &sobel_ad2y_worker );
 
 		OCPI::Container::Port
@@ -205,13 +213,7 @@ int main ( int argc, char* argv [ ] )
 				Demo::get_rcc_uri ( "sobel_32f" ).c_str ( ),
 				"sobel_32f" );
 
-		OCPI::Util::PValue sobel_adxdy_worker_pvlist[] = {
-			OCPI::Util::PVULong("height", imgA->height),
-			OCPI::Util::PVULong("width", imgA->width),
-			OCPI::Util::PVBool("xderiv", 0),
-			OCPI::Util::PVEnd
-		};
-		sobel_adxdy_worker.set_properties( sobel_adxdy_worker_pvlist );
+		sobel_adxdy_worker.set_properties( sobel_dy_worker_pvlist );
 		facades.push_back ( &sobel_adxdy_worker );
 
 		OCPI::Container::Port
@@ -225,13 +227,7 @@ int main ( int argc, char* argv [ ] )
 				Demo::get_rcc_uri ( "sobel_32f" ).c_str ( ),
 				"sobel_32f" );
 
-		OCPI::Util::PValue sobel_bdx_worker_pvlist[] = {
-			OCPI::Util::PVULong("height", imgA->height),
-			OCPI::Util::PVULong("width", imgA->width),
-			OCPI::Util::PVBool("xderiv", 1),
-			OCPI::Util::PVEnd
-		};
-		sobel_bdx_worker.set_properties( sobel_bdx_worker_pvlist );
+		sobel_bdx_worker.set_properties( sobel_dx_worker_pvlist );
 		facades.push_back ( &sobel_bdx_worker );
 
 		OCPI::Container::Port
@@ -245,13 +241,7 @@ int main ( int argc, char* argv [ ] )
 				Demo::get_rcc_uri ( "sobel_32f" ).c_str ( ),
 				"sobel_32f" );
 
-		OCPI::Util::PValue sobel_bdy_worker_pvlist[] = {
-			OCPI::Util::PVULong("height", imgA->height),
-			OCPI::Util::PVULong("width", imgA->width),
-			OCPI::Util::PVBool("xderiv", 0),
-			OCPI::Util::PVEnd
-		};
-		sobel_bdy_worker.set_properties( sobel_bdy_worker_pvlist );
+		sobel_bdy_worker.set_properties( sobel_dy_worker_pvlist );
 		facades.push_back ( &sobel_bdy_worker );
 
 		OCPI::Container::Port
@@ -396,22 +386,31 @@ int main ( int argc, char* argv [ ] )
     std::cout << "My output buffer is size " << olength << std::endl;
 
     // Call dispatch so the worker can "act" on its input data
-    for( int i = 0; i < 20; i++ )
+    for( int i = 0; i < 20; i++ ) {
+      printf(">>> DISPATCHING: %d\n", i);
       std::for_each ( interfaces.begin(), interfaces.end(), Demo::dispatch );
+    }
 
     // Get input data
     OCPI::Container::ExternalBuffer* myInput;
-    myInput = myIn.getBuffer(opcode, idata, ilength, isEndOfData);
 
-    std::cout << "My input buffer is size " << ilength << std::endl;
+/*
+    myInput = myInFeature.getBuffer(opcode, idata, ilength, isEndOfData);
+    size_t ncorners = ilength / (2 * sizeof(float));
+    float *cornersA = (float *) malloc(ncorners * 2 * sizeof(float));
+    memcpy(cornersA, idata, ilength);
+    // myInput->release();
+    std::cout << "My old corners " << ncorners << std::endl;
+*/
+    float *cornersA;
 
     // Get corners, statuses, errors
+    myInput = myIn.getBuffer(opcode, idata, ilength, isEndOfData);
     size_t ncorners = ilength / (2 * sizeof(float));
-    std::cout << "My corners " << ncorners << std::endl;
-
     float *cornersB = (float *) malloc(ncorners * 2 * sizeof(float));
     memcpy(cornersB, idata, ilength);
     // myInput->release();
+    std::cout << "My corners " << ncorners << std::endl;
 
     myInput = myInStatus.getBuffer(opcode, idata, ilength, isEndOfData);
     char *status = (char *) malloc(ncorners * sizeof(char));
@@ -421,11 +420,6 @@ int main ( int argc, char* argv [ ] )
     myInput = myInErr.getBuffer(opcode, idata, ilength, isEndOfData);
     float *err = (float *) malloc(ncorners * sizeof(float));
     memcpy(err, idata, ilength);
-    // myInput->release();
-
-    myInput = myInFeature.getBuffer(opcode, idata, ilength, isEndOfData);
-    float *cornersA = (float *) malloc(ncorners * 2 * sizeof(float));
-    memcpy(cornersA, idata, ilength);
     // myInput->release();
 
     // Draw flow

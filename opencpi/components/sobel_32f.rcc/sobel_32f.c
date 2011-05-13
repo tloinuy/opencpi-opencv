@@ -1,4 +1,25 @@
 /*
+=====
+Copyright (C) 2011 Massachusetts Institute of Technology
+
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+======
+*/
+
+/*
  * THIS FILE WAS ORIGINALLY GENERATED ON Fri May 6 03:40:31 2011 EDT
  * BASED ON THE FILE: sobel_32f.xml
  * YOU ARE EXPECTED TO EDIT IT
@@ -155,7 +176,7 @@ static RCCResult run(RCCWorker *self,
           (float *) out_32f->current.data,
           lines, p->xderiv );
 
-  c->advance( in, FRAME_BYTES );
+  // c->advance( in, FRAME_BYTES );
 
   lineAt += lines;
   // next image
@@ -169,9 +190,12 @@ static RCCResult run(RCCWorker *self,
 
   out->output.u.operation = in->input.u.operation;
   out->output.length = produced * p->width * sizeof(Pixel);
+  // c->advance( out, FRAME_BYTES );
 
   out_32f->output.u.operation = in->input.u.operation;
   out_32f->output.length = produced * p->width * sizeof(float);
+  // c->advance( out_32f, FRAME_BYTES * sizeof(float) );
+
 
   return RCC_ADVANCE;
 }
