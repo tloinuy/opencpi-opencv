@@ -178,14 +178,12 @@ int main ( int argc, char* argv [ ] )
 			&cornerAOut = corner_workerA.port("out"),
 			&cornerAIn = corner_workerA.port("in");
 
-/*
     // sobel_32f (A_dx)
 		Demo::WorkerFacade sobel_adx_worker (
         "Sobel 32f A_dx (RCC)",
 				rcc_application,
 				Demo::get_rcc_uri ( "sobel_32f" ).c_str ( ),
 				"sobel_32f" );
-*/
 
 		OCPI::Util::PValue sobel_dx_worker_pvlist[] = {
 			OCPI::Util::PVULong("height", imgA->height),
@@ -194,9 +192,8 @@ int main ( int argc, char* argv [ ] )
 			OCPI::Util::PVEnd
 		};
 
-/*
 		sobel_adx_worker.set_properties( sobel_dx_worker_pvlist );
-		//facades.push_back ( &sobel_adx_worker );
+		facades.push_back ( &sobel_adx_worker );
 
 		OCPI::Container::Port
 			&sobelAdxOut = sobel_adx_worker.port("out_32f"),
@@ -209,7 +206,6 @@ int main ( int argc, char* argv [ ] )
 				rcc_application,
 				Demo::get_rcc_uri ( "sobel_32f" ).c_str ( ),
 				"sobel_32f" );
-*/
 
 		OCPI::Util::PValue sobel_dy_worker_pvlist[] = {
 			OCPI::Util::PVULong("height", imgA->height),
@@ -218,14 +214,14 @@ int main ( int argc, char* argv [ ] )
 			OCPI::Util::PVEnd
 		};
 
-/*
 		sobel_ady_worker.set_properties( sobel_dy_worker_pvlist );
-		//facades.push_back ( &sobel_ady_worker );
+		facades.push_back ( &sobel_ady_worker );
 
 		OCPI::Container::Port
 			&sobelAdyOut = sobel_ady_worker.port("out_32f"),
 			&sobelAdy8UOut = sobel_ady_worker.port("out"),
 			&sobelAdyIn = sobel_ady_worker.port("in");
+/*
 
     // sobel_32f (A_d2x)
 		Demo::WorkerFacade sobel_ad2x_worker (
@@ -392,6 +388,13 @@ int main ( int argc, char* argv [ ] )
 			&myInErr = opticalFlowErrOut.connectExternal("aci_in_err"),
       &myInFeature = featuresAOut.connectExternal("aci_in_feature");
     */
+		OCPI::Container::ExternalPort
+			&myOutAdx = sobelAdxIn.connectExternal("aci_out_Adx"),
+			&myOutAdy = sobelAdyIn.connectExternal("aci_out_Ady"),
+      &myInAdx = sobelAdx8UOut.connectExternal("aci_in_Adx"),
+      &myInAdy = sobelAdy8UOut.connectExternal("aci_in_Ady"),
+      &myIn32fAdx = sobelAdxOut.connectExternal("aci_in_32f_Adx"),
+      &myIn32fAdy = sobelAdyOut.connectExternal("aci_in_32f_Ady");
 
 		OCPI::Container::ExternalPort
 			&myOutFeature = cornerIn.connectExternal("aci_out"),
@@ -446,7 +449,6 @@ int main ( int argc, char* argv [ ] )
     myOutput->put(0, imgA->height * imgA->width, false);
     */
 
-    /*
     myOutput = myOutAdx.getBuffer(odata, olength);
     memcpy(odata, imgA->imageData, imgA->height * imgA->width);
     myOutput->put(0, imgA->height * imgA->width, false);
@@ -454,7 +456,6 @@ int main ( int argc, char* argv [ ] )
     myOutput = myOutAdy.getBuffer(odata, olength);
     memcpy(odata, imgA->imageData, imgA->height * imgA->width);
     myOutput->put(0, imgA->height * imgA->width, false);
-    */
 
     /*
     myOutput = myOutB.getBuffer(odata, olength);
@@ -498,7 +499,7 @@ int main ( int argc, char* argv [ ] )
     */
 
     // Test gradients
-    myInput = myInBdx.getBuffer(opcode, idata, ilength, isEndOfData);
+    myInput = myInAdx.getBuffer(opcode, idata, ilength, isEndOfData);
     std::cout << "My size: " << ilength << ", H*W: "
               << imgA->height*imgA->width << " "
               << imgB->height*imgB->width << std::endl;
