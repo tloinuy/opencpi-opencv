@@ -221,7 +221,6 @@ int main ( int argc, char* argv [ ] )
 			&sobelAdyOut = sobel_ady_worker.port("out_32f"),
 			&sobelAdy8UOut = sobel_ady_worker.port("out"),
 			&sobelAdyIn = sobel_ady_worker.port("in");
-/*
 
     // sobel_32f (A_d2x)
 		Demo::WorkerFacade sobel_ad2x_worker (
@@ -231,10 +230,11 @@ int main ( int argc, char* argv [ ] )
 				"sobel_32f" );
 
 		sobel_ad2x_worker.set_properties( sobel_dx_worker_pvlist );
-		//facades.push_back ( &sobel_ad2x_worker );
+		facades.push_back ( &sobel_ad2x_worker );
 
 		OCPI::Container::Port
 			&sobelAd2xOut = sobel_ad2x_worker.port("out_32f"),
+			&sobelAd2x8UOut = sobel_ad2x_worker.port("out"),
 			&sobelAd2xIn = sobel_ad2x_worker.port("in");
 
     // sobel_32f (A_d2y)
@@ -245,26 +245,42 @@ int main ( int argc, char* argv [ ] )
 				"sobel_32f" );
 
 		sobel_ad2y_worker.set_properties( sobel_dy_worker_pvlist );
-		//facades.push_back ( &sobel_ad2y_worker );
+		facades.push_back ( &sobel_ad2y_worker );
 
 		OCPI::Container::Port
 			&sobelAd2yOut = sobel_ad2y_worker.port("out_32f"),
+			&sobelAd2y8UOut = sobel_ad2y_worker.port("out"),
 			&sobelAd2yIn = sobel_ad2y_worker.port("in");
 
-    // sobel_32f (A_dxdy)
-		Demo::WorkerFacade sobel_adxdy_worker (
+    // sobel_32f (A_dxdy_x)
+		Demo::WorkerFacade sobel_adxdy_x_worker (
         "Sobel 32f A_dxdy (RCC)",
 				rcc_application,
 				Demo::get_rcc_uri ( "sobel_32f" ).c_str ( ),
 				"sobel_32f" );
 
-		sobel_adxdy_worker.set_properties( sobel_dy_worker_pvlist );
-		//facades.push_back ( &sobel_adxdy_worker );
+		sobel_adxdy_x_worker.set_properties( sobel_dx_worker_pvlist );
+		facades.push_back ( &sobel_adxdy_x_worker );
 
 		OCPI::Container::Port
-			&sobelAdxdyOut = sobel_adxdy_worker.port("out_32f"),
-			&sobelAdxdyIn = sobel_adxdy_worker.port("in");
-*/
+			&sobelAdxdyXOut = sobel_adxdy_x_worker.port("out_32f"),
+			&sobelAdxdyX8UOut = sobel_adxdy_x_worker.port("out"),
+			&sobelAdxdyXIn = sobel_adxdy_x_worker.port("in");
+
+    // sobel_32f (A_dxdy_y)
+		Demo::WorkerFacade sobel_adxdy_y_worker (
+        "Sobel 32f A_dxdy (RCC)",
+				rcc_application,
+				Demo::get_rcc_uri ( "sobel_32f" ).c_str ( ),
+				"sobel_32f" );
+
+		sobel_adxdy_y_worker.set_properties( sobel_dy_worker_pvlist );
+		facades.push_back ( &sobel_adxdy_y_worker );
+
+		OCPI::Container::Port
+			&sobelAdxdyYOut = sobel_adxdy_y_worker.port("out_32f"),
+			&sobelAdxdyY8UOut = sobel_adxdy_y_worker.port("out"),
+			&sobelAdxdyYIn = sobel_adxdy_y_worker.port("in");
 
     // sobel_32f (B_dx)
 		Demo::WorkerFacade sobel_bdx_worker (
@@ -364,11 +380,9 @@ int main ( int argc, char* argv [ ] )
 
     printf(">>> DONE CONNECTING (B)!\n");
 
-    /*
     sobelAd2xIn.connect( sobelAdx8UOut );
     sobelAd2yIn.connect( sobelAdy8UOut );
-    sobelAdxdyIn.connect( sobelAdx8UOut );
-    */
+    sobelAdxdyYIn.connect( sobelAdxdyX8UOut );
 
     printf(">>> DONE CONNECTING (Sobel)!\n");
 
@@ -391,10 +405,24 @@ int main ( int argc, char* argv [ ] )
 		OCPI::Container::ExternalPort
 			&myOutAdx = sobelAdxIn.connectExternal("aci_out_Adx"),
 			&myOutAdy = sobelAdyIn.connectExternal("aci_out_Ady"),
-      &myInAdx = sobelAdx8UOut.connectExternal("aci_in_Adx"),
-      &myInAdy = sobelAdy8UOut.connectExternal("aci_in_Ady"),
+      //&myInAdx = sobelAdx8UOut.connectExternal("aci_in_Adx"),
+      //&myInAdy = sobelAdy8UOut.connectExternal("aci_in_Ady"),
       &myIn32fAdx = sobelAdxOut.connectExternal("aci_in_32f_Adx"),
       &myIn32fAdy = sobelAdyOut.connectExternal("aci_in_32f_Ady");
+
+		OCPI::Container::ExternalPort
+			//&myOutAd2x = sobelAd2xIn.connectExternal("aci_out_Ad2x"),
+			//&myOutAd2y = sobelAd2yIn.connectExternal("aci_out_Ad2y"),
+      &myInAd2x = sobelAd2x8UOut.connectExternal("aci_in_Ad2x"),
+      &myInAd2y = sobelAd2y8UOut.connectExternal("aci_in_Ad2y"),
+      &myIn32fAd2x = sobelAd2xOut.connectExternal("aci_in_32f_Ad2x"),
+      &myIn32fAd2y = sobelAd2yOut.connectExternal("aci_in_32f_Ad2y");
+
+		OCPI::Container::ExternalPort
+			&myOutAdxdy = sobelAdxdyXIn.connectExternal("aci_out_Adxdy"),
+      &myInAdxdy = sobelAdxdyY8UOut.connectExternal("aci_in_Adxdy"),
+      &myIn32fAdxdy_X = sobelAdxdyXOut.connectExternal("aci_in_32f_Adxdy_X"),
+      &myIn32fAdxdy_Y = sobelAdxdyYOut.connectExternal("aci_in_32f_Adxdy_Y");
 
 		OCPI::Container::ExternalPort
 			&myOutFeature = cornerIn.connectExternal("aci_out"),
@@ -474,7 +502,7 @@ int main ( int argc, char* argv [ ] )
     std::cout << "My output buffer is size " << olength << std::endl;
 
     // Call dispatch so the worker can "act" on its input data
-    for( int i = 0; i < 3; i++ ) {
+    for( int i = 0; i < 4; i++ ) {
       printf(">>> DISPATCHING: %d\n", i);
       std::for_each ( interfaces.begin(), interfaces.end(), Demo::dispatch );
     }
@@ -492,6 +520,7 @@ int main ( int argc, char* argv [ ] )
     */
 
     /*
+    // Test features
     for( size_t i = 0; i < ncorners; i++) {
       float x = cornersA[2*i], y = cornersA[2*i+1];
       cvCircle( imgC, cvPoint( cvRound(x), cvRound(y) ), 5, CV_RGB(255, 0, 0), 2 );
@@ -499,11 +528,11 @@ int main ( int argc, char* argv [ ] )
     */
 
     // Test gradients
-    myInput = myInAdx.getBuffer(opcode, idata, ilength, isEndOfData);
+    myInput = myInAd2x.getBuffer(opcode, idata, ilength, isEndOfData);
     std::cout << "My size: " << ilength << ", H*W: "
               << imgA->height*imgA->width << " "
               << imgB->height*imgB->width << std::endl;
-    // myInput->release();
+    myInput->release();
     memcpy(imgC->imageData, idata, ilength);
 
     // Get corners, statuses, errors
