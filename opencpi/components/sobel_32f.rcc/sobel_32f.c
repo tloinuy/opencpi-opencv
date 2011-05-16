@@ -182,6 +182,7 @@ static RCCResult run(RCCWorker *self,
   // next image
   if( lineAt == p->height ) {
     lineAt = 0;
+    free( img );
   }
 
   printf(">>> PRODUCED: %d\n", produced);
