@@ -185,10 +185,6 @@ static RCCResult run(RCCWorker *self,
     free( img );
   }
 
-  printf(">>> PRODUCED: %d\n", produced);
-  printf(">>> H, W: %d %d\n", p->height, p->width);
-  printf(">>> Xderiv: %d\n", p->xderiv);
-
   out->output.u.operation = in->input.u.operation;
   out->output.length = produced * p->width * sizeof(Pixel);
   // c->advance( out, FRAME_BYTES );

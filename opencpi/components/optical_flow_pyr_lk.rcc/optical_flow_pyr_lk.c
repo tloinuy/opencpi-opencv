@@ -59,13 +59,9 @@ float *bdy;
 void calcOpticalFlowPyrLK(
       unsigned H, unsigned W,
       const char *prevImg, const char *nextImg, // input ports
-      // const cv::Mat& prevImg, const cv::Mat& nextImg,
       struct Point2f *prevPts, // input port
-      // const vector<Point2f>& prevPts,
       struct Point2f *nextPts, // output port
-      // vector<Point2f>& nextPts,
       char *status, float *err, // output ports
-      // vector<uchar>& status, vector<float>& err, // output ports
       int winHeight, int winWidth, // 10, 10
       unsigned level, // 0
       double termMaxCount, // = 20,
@@ -78,45 +74,21 @@ void calcOpticalFlowPyrLK(
     if(derivLambda > 1.) derivLambda = 1.;
 
     double lambda1 = 1. - derivLambda, lambda2 = derivLambda;
-    // const int derivKernelSize = 3;
     const float deriv1Scale = 0.5f/4.f;
     const float deriv2Scale = 0.25f/4.f;
-    // const int derivDepth = CV_32F;
     struct Point2f halfWin;
     halfWin.x = (winWidth-1)*0.5f;
     halfWin.y = (winHeight-1)*0.5f;
 
 
-    // size_t npoints = prevPts.size(); // TODO - calc
-    // nextPts.resize(npoints);
-    // status.resize(npoints);
     size_t i, j;
     for( i = 0; i < npoints; i++ )
         status[i] = 1; // true;
-    // err.resize(npoints);
 
     if( npoints == 0 )
         return;
     
-    /*
-    int cn = prevImg.channels();
-    printf("cn: %d\n", cn); // cn=1
-    */
     int cn = 1;
-    // buildPyramid( prevImg, prevPyr, 0 );//maxLevel );
-    // buildPyramid( nextImg, nextPyr, 0 );//maxLevel );
-    /*
-    // I, dI/dx ~ Ix, dI/dy ~ Iy, d2I/dx2 ~ Ixx, d2I/dxdy ~ Ixy, d2I/dy2 ~ Iyy
-    cv::Mat derivIBuf((prevImg.rows + winHeight*2),
-                  (prevImg.cols + winWidth*2),
-                  CV_MAKETYPE(derivDepth, cn*6));
-    // J, dJ/dx ~ Jx, dJ/dy ~ Jy
-    cv::Mat derivJBuf((prevImg.rows + winHeight*2),
-                  (prevImg.cols + winWidth*2),
-                  CV_MAKETYPE(derivDepth, cn*3));
-    cv::Mat tempDerivBuf(prevImg.size(), CV_MAKETYPE(derivIBuf.type(), cn));
-    cv::Mat derivIWinBuf(cv::Size(winWidth, winHeight), derivIBuf.type());
-    */
     // substitute parameters
     size_t derivIStep = 6 * cn * (W+2*winWidth) * sizeof(float);
     size_t derivJStep = 3 * cn * (W+2*winWidth) * sizeof(float);
@@ -130,111 +102,21 @@ void calcOpticalFlowPyrLK(
 
     float *derivIBuf = malloc( (H+2*winHeight)*(W+2*winWidth)*sizeof(float)*6 );
     float *derivJBuf = malloc( (H+2*winHeight)*(W+2*winWidth)*sizeof(float)*3 );
-    // float *tempDerivBuf = malloc( H*W*sizeof(float) );
     float *derivIWinBuf = malloc( winHeight*winWidth*sizeof(float) );
 
     const char *derivIData = (const char *) derivIBuf;
     const char *derivJData = (const char *) derivJBuf;
     const char *derivIWinBufData = (const char *) derivIWinBuf;
 
-    /*
-    if( (criteria.type & TermCriteria::COUNT) == 0 )
-        criteria.maxCount = 30;
-    else
-        criteria.maxCount = std::min(std::max(criteria.maxCount, 0), 100);
-    */
     if(termMaxCount > 100) termMaxCount = 100;
     if(termMaxCount < 0) termMaxCount = 0;
 
-    /*
-    if( (criteria.type & TermCriteria::EPS) == 0 )
-        criteria.epsilon = 0.01;
-    else
-        criteria.epsilon = std::min(std::max(criteria.epsilon, 0.), 10.);
-    */
     if(termEpsilon > 10.) termEpsilon = 10.;
     if(termEpsilon < 0.) termEpsilon = 0.;
     termEpsilon *= termEpsilon; // work with squared distances
-    // criteria.epsilon *= criteria.epsilon;
-  
-    // for( int level = maxLevel; level >= 0; level-- )
+
+    // one level
     {
-        // derivatives
-        /*
-        int k;
-        cv::Size imgSize = prevPyr[level].size();
-
-        cv::Mat tempDeriv( imgSize, tempDerivBuf.type(), tempDerivBuf.data );
-        cv::Mat _derivI( imgSize.height + winHeight*2,
-            imgSize.width + winWidth*2,
-            derivIBuf.type(), derivIBuf.data );
-        cv::Mat _derivJ( imgSize.height + winHeight*2,
-            imgSize.width + winWidth*2,
-            derivJBuf.type(), derivJBuf.data );
-        cv::Mat derivI(_derivI, cv::Rect(winWidth, winHeight, imgSize.width, imgSize.height));
-        cv::Mat derivJ(_derivJ, cv::Rect(winWidth, winHeight, imgSize.width, imgSize.height));
-        CvMat cvderivI = _derivI;
-        cvZero(&cvderivI);
-        CvMat cvderivJ = _derivJ;
-        cvZero(&cvderivJ);
-
-        // printf("derivI.elemSize1() or esz1: %d\n", derivI.elemSize1()); // 4 here
-        // printf("derivI.step: %d, %d\n", derivI.step, derivIStep);
-        // printf("derivIWinBuf.step: %d, %d\n", derivIWinBuf.step, derivIWinBufStep);
-        // printf("derivJ.step: %d\n", derivJ.step);
-        // printf("derivJ.step / (W+2*winWidth): %d\n", derivJ.step / (W+2*winWidth));
-
-        vector<int> fromTo(cn*2);
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2] = k;
-
-        prevPyr[level].convertTo(tempDeriv, derivDepth);
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2+1] = k*6;
-        mixChannels(&tempDeriv, 1, &derivI, 1, &fromTo[0], cn);
-
-        // compute spatial derivatives and merge them together
-        Sobel(prevPyr[level], tempDeriv, derivDepth, 1, 0, derivKernelSize, deriv1Scale );
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2+1] = k*6 + 1;
-        mixChannels(&tempDeriv, 1, &derivI, 1, &fromTo[0], cn);
-
-        Sobel(prevPyr[level], tempDeriv, derivDepth, 0, 1, derivKernelSize, deriv1Scale );
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2+1] = k*6 + 2;
-        mixChannels(&tempDeriv, 1, &derivI, 1, &fromTo[0], cn);
-
-        Sobel(prevPyr[level], tempDeriv, derivDepth, 2, 0, derivKernelSize, deriv2Scale );
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2+1] = k*6 + 3;
-        mixChannels(&tempDeriv, 1, &derivI, 1, &fromTo[0], cn);
-
-        Sobel(prevPyr[level], tempDeriv, derivDepth, 1, 1, derivKernelSize, deriv2Scale );
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2+1] = k*6 + 4;
-        mixChannels(&tempDeriv, 1, &derivI, 1, &fromTo[0], cn);
-
-        Sobel(prevPyr[level], tempDeriv, derivDepth, 0, 2, derivKernelSize, deriv2Scale );
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2+1] = k*6 + 5;
-        mixChannels(&tempDeriv, 1, &derivI, 1, &fromTo[0], cn);
-
-        nextPyr[level].convertTo(tempDeriv, derivDepth);
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2+1] = k*3;
-        mixChannels(&tempDeriv, 1, &derivJ, 1, &fromTo[0], cn);
-
-        Sobel(nextPyr[level], tempDeriv, derivDepth, 1, 0, derivKernelSize, deriv1Scale );
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2+1] = k*3 + 1;
-        mixChannels(&tempDeriv, 1, &derivJ, 1, &fromTo[0], cn);
-
-        Sobel(nextPyr[level], tempDeriv, derivDepth, 0, 1, derivKernelSize, deriv1Scale );
-        for( k = 0; k < cn; k++ )
-            fromTo[k*2+1] = k*3 + 2;
-        mixChannels(&tempDeriv, 1, &derivJ, 1, &fromTo[0], cn);
-        */
-
         // I, dI/dx ~ Ix, dI/dy ~ Iy, d2I/dx2 ~ Ixx, d2I/dxdy ~ Ixy, d2I/dy2 ~ Iyy
         // derivI
         for( i = 0; i < H; i++ ) {
@@ -261,11 +143,6 @@ void calcOpticalFlowPyrLK(
             dJ[6*jj+2] = bdy[i*W+j] * deriv1Scale;
           }
         }
-
-        /*copyMakeBorder( derivI, _derivI, winHeight, winHeight,
-            winWidth, winWidth, BORDER_CONSTANT );
-        copyMakeBorder( derivJ, _derivJ, winHeight, winHeight,
-            winWidth, winWidth, BORDER_CONSTANT );*/
 
         size_t ptidx;
         for( ptidx = 0; ptidx < npoints; ptidx++ )
@@ -481,8 +358,6 @@ static RCCResult run(RCCWorker *self,
 
   // get number of features
   size_t npoints = in_feature->input.length / (2 * sizeof(float));
-
-  printf(">>> NPOINTS: %d\n", npoints);
 
   // calc optical flow
   calcOpticalFlowPyrLK( p->height, p->width,
