@@ -115,7 +115,7 @@ int main ( int argc, char* argv [ ] )
     OCPI::Util::PValue sobel_x_worker_pvlist[] = {
       OCPI::Util::PVULong("height", img->height),
       OCPI::Util::PVULong("width", img->width),
-      OCPI::Util::PVULong("xderiv", 1), // TODO change to bool
+      OCPI::Util::PVBool("xderiv", 1),
       OCPI::Util::PVEnd
     };
     sobel_x_worker.set_properties( sobel_x_worker_pvlist );
@@ -135,7 +135,7 @@ int main ( int argc, char* argv [ ] )
     OCPI::Util::PValue sobel_y_worker_pvlist[] = {
       OCPI::Util::PVULong("height", img->height),
       OCPI::Util::PVULong("width", img->width),
-      OCPI::Util::PVULong("xderiv", 0), // TODO change to bool
+      OCPI::Util::PVBool("xderiv", 0),
       OCPI::Util::PVEnd
     };
     sobel_y_worker.set_properties( sobel_y_worker_pvlist );
@@ -206,16 +206,14 @@ int main ( int argc, char* argv [ ] )
       std::cout << "My output buffer is size " << olength << std::endl;
 
       // Call dispatch so the worker can "act" on its input data
-      std::for_each ( interfaces.begin(),
-          interfaces.end(),
-          Demo::dispatch );
+      std::for_each ( interfaces.begin(), interfaces.end(), Demo::dispatch );
     }
-    // TODO - last line?
-    std::for_each ( interfaces.begin(), interfaces.end(), Demo::dispatch );
 
     // Get input data
-    OCPI::Container::ExternalBuffer* myInput = myIn.getBuffer(opcode, idata,
-        ilength, isEndOfData);
+    OCPI::Container::ExternalBuffer* myInput = NULL;
+    while((myInput = myIn.getBuffer(opcode, idata, ilength, isEndOfData)) == NULL) {
+      std::for_each ( interfaces.begin(), interfaces.end(), Demo::dispatch );
+    }
 
     std::cout << "My input buffer is size " << ilength << std::endl;
 

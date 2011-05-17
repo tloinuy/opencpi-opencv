@@ -47,7 +47,7 @@ int main ( int argc, char* argv [ ] )
   // load images
   IplImage* imgA_color = cvLoadImage( argv[1] );
   IplImage* imgB_color = cvLoadImage( argv[2] );
-  IplImage* imgC = cvLoadImage( argv[1], 0 ); // for marking flow
+  IplImage* imgC = cvLoadImage( argv[1] ); // for marking flow
 
   CvSize img_sz = cvGetSize( imgA_color );
 
@@ -312,7 +312,6 @@ int main ( int argc, char* argv [ ] )
 			&sobelBdy8UOut = sobel_bdy_worker.port("out"),
 			&sobelBdyIn = sobel_bdy_worker.port("in");
 
-/*
     // optical_flow_pyr_lk
 		Demo::WorkerFacade optical_flow_worker (
         "Optical Flow Pyr LK (RCC)",
@@ -326,13 +325,13 @@ int main ( int argc, char* argv [ ] )
 			OCPI::Util::PVULong("win_height", 10),
 			OCPI::Util::PVULong("win_width", 10),
 			OCPI::Util::PVULong("level", 0),
-			OCPI::Util::PVULong("term_max_count", 20),
+			OCPI::Util::PVULong("term_max_count", 30),
 			OCPI::Util::PVDouble("term_epsilon", 0.01),
 			OCPI::Util::PVDouble("deriv_lambda", 0.5),
 			OCPI::Util::PVEnd
 		};
 		optical_flow_worker.set_properties( optical_flow_worker_pvlist );
-		//facades.push_back ( &optical_flow_worker );
+		facades.push_back ( &optical_flow_worker );
 
 		OCPI::Container::Port
 			&opticalFlowInA = optical_flow_worker.port("in_A"),
@@ -348,7 +347,6 @@ int main ( int argc, char* argv [ ] )
 			&opticalFlowOut = optical_flow_worker.port("out"),
 			&opticalFlowStatusOut = optical_flow_worker.port("out_status"),
 			&opticalFlowErrOut = optical_flow_worker.port("out_err");
-*/
 
     printf(">>> DONE INIT!\n");
 
@@ -356,27 +354,23 @@ int main ( int argc, char* argv [ ] )
 
     minIn.connect( cornerOut );
     featuresIn.connect( minOut );
-    //opticalFlowInFeature.connect( featuresOut );
+    opticalFlowInFeature.connect( featuresOut );
 
     minAIn.connect( cornerAOut );
     featuresAIn.connect( minAOut );
 
     printf(">>> DONE CONNECTING (feature)!\n");
 
-    /*
     opticalFlowInAdx.connect( sobelAdxOut );
     opticalFlowInAdy.connect( sobelAdyOut );
     opticalFlowInAd2x.connect( sobelAd2xOut );
     opticalFlowInAd2y.connect( sobelAd2yOut );
-    opticalFlowInAdxdy.connect( sobelAdxdyOut );
-    */
+    opticalFlowInAdxdy.connect( sobelAdxdyYOut );
 
     printf(">>> DONE CONNECTING (A)!\n");
 
-    /*
     opticalFlowInBdx.connect( sobelBdxOut );
     opticalFlowInBdy.connect( sobelBdyOut );
-    */
 
     printf(">>> DONE CONNECTING (B)!\n");
 
@@ -387,56 +381,48 @@ int main ( int argc, char* argv [ ] )
     printf(">>> DONE CONNECTING (Sobel)!\n");
 
 		// Set external ports
-    /*
 		OCPI::Container::ExternalPort
-			&myOutFeature = cornerIn.connectExternal("aci_out"),
-			&myOutFeatureA = cornerAIn.connectExternal("aci_outA"),
 			&myOutA = opticalFlowInA.connectExternal("aci_out_A"),
-			&myOutAdx = sobelAdxIn.connectExternal("aci_out_Adx"),
-			&myOutAdy = sobelAdyIn.connectExternal("aci_out_Ady"),
 			&myOutB = opticalFlowInB.connectExternal("aci_out_B"),
-			&myOutBdx = sobelBdxIn.connectExternal("aci_out_Bdx"),
-			&myOutBdy = sobelBdyIn.connectExternal("aci_out_Bdy"),
 			&myIn = opticalFlowOut.connectExternal("aci_in"),
 			&myInStatus = opticalFlowStatusOut.connectExternal("aci_in_status"),
-			&myInErr = opticalFlowErrOut.connectExternal("aci_in_err"),
-      &myInFeature = featuresAOut.connectExternal("aci_in_feature");
-    */
+			&myInErr = opticalFlowErrOut.connectExternal("aci_in_err");
+
 		OCPI::Container::ExternalPort
 			&myOutAdx = sobelAdxIn.connectExternal("aci_out_Adx"),
-			&myOutAdy = sobelAdyIn.connectExternal("aci_out_Ady"),
+			&myOutAdy = sobelAdyIn.connectExternal("aci_out_Ady");
       //&myInAdx = sobelAdx8UOut.connectExternal("aci_in_Adx"),
       //&myInAdy = sobelAdy8UOut.connectExternal("aci_in_Ady"),
-      &myIn32fAdx = sobelAdxOut.connectExternal("aci_in_32f_Adx"),
-      &myIn32fAdy = sobelAdyOut.connectExternal("aci_in_32f_Ady");
+      //&myIn32fAdx = sobelAdxOut.connectExternal("aci_in_32f_Adx"),
+      //&myIn32fAdy = sobelAdyOut.connectExternal("aci_in_32f_Ady");
 
 		OCPI::Container::ExternalPort
 			//&myOutAd2x = sobelAd2xIn.connectExternal("aci_out_Ad2x"),
 			//&myOutAd2y = sobelAd2yIn.connectExternal("aci_out_Ad2y"),
       &myInAd2x = sobelAd2x8UOut.connectExternal("aci_in_Ad2x"),
-      &myInAd2y = sobelAd2y8UOut.connectExternal("aci_in_Ad2y"),
-      &myIn32fAd2x = sobelAd2xOut.connectExternal("aci_in_32f_Ad2x"),
-      &myIn32fAd2y = sobelAd2yOut.connectExternal("aci_in_32f_Ad2y");
+      &myInAd2y = sobelAd2y8UOut.connectExternal("aci_in_Ad2y");
+      //&myIn32fAd2x = sobelAd2xOut.connectExternal("aci_in_32f_Ad2x"),
+      //&myIn32fAd2y = sobelAd2yOut.connectExternal("aci_in_32f_Ad2y");
 
 		OCPI::Container::ExternalPort
 			&myOutAdxdy = sobelAdxdyXIn.connectExternal("aci_out_Adxdy"),
       &myInAdxdy = sobelAdxdyY8UOut.connectExternal("aci_in_Adxdy"),
-      &myIn32fAdxdy_X = sobelAdxdyXOut.connectExternal("aci_in_32f_Adxdy_X"),
-      &myIn32fAdxdy_Y = sobelAdxdyYOut.connectExternal("aci_in_32f_Adxdy_Y");
+      &myIn32fAdxdy_X = sobelAdxdyXOut.connectExternal("aci_in_32f_Adxdy_X");
+      //&myIn32fAdxdy_Y = sobelAdxdyYOut.connectExternal("aci_in_32f_Adxdy_Y");
 
 		OCPI::Container::ExternalPort
 			&myOutFeature = cornerIn.connectExternal("aci_out"),
 			&myOutFeatureA = cornerAIn.connectExternal("aci_outA"),
-      &myInFeature = featuresOut.connectExternal("aci_in_feature"),
+      //&myInFeature = featuresOut.connectExternal("aci_in_feature"),
       &myInFeatureA = featuresAOut.connectExternal("aci_in_featureA");
 
 		OCPI::Container::ExternalPort
 			&myOutBdx = sobelBdxIn.connectExternal("aci_out_Bdx"),
 			&myOutBdy = sobelBdyIn.connectExternal("aci_out_Bdy"),
       &myInBdx = sobelBdx8UOut.connectExternal("aci_in_Bdx"),
-      &myInBdy = sobelBdy8UOut.connectExternal("aci_in_Bdy"),
-      &myIn32fBdx = sobelBdxOut.connectExternal("aci_in_32f_Bdx"),
-      &myIn32fBdy = sobelBdyOut.connectExternal("aci_in_32f_Bdy");
+      &myInBdy = sobelBdy8UOut.connectExternal("aci_in_Bdy");
+      //&myIn32fBdx = sobelBdxOut.connectExternal("aci_in_32f_Bdx"),
+      //&myIn32fBdy = sobelBdyOut.connectExternal("aci_in_32f_Bdy");
 
     printf(">>> DONE CONNECTING (all)!\n");
 
@@ -471,11 +457,9 @@ int main ( int argc, char* argv [ ] )
     memcpy(odata, imgA->imageData, imgA->height * imgA->width);
     myOutput->put(0, imgA->height * imgA->width, false);
 
-    /*
     myOutput = myOutA.getBuffer(odata, olength);
     memcpy(odata, imgA->imageData, imgA->height * imgA->width);
     myOutput->put(0, imgA->height * imgA->width, false);
-    */
 
     myOutput = myOutAdx.getBuffer(odata, olength);
     memcpy(odata, imgA->imageData, imgA->height * imgA->width);
@@ -485,11 +469,13 @@ int main ( int argc, char* argv [ ] )
     memcpy(odata, imgA->imageData, imgA->height * imgA->width);
     myOutput->put(0, imgA->height * imgA->width, false);
 
-    /*
+    myOutput = myOutAdxdy.getBuffer(odata, olength);
+    memcpy(odata, imgA->imageData, imgA->height * imgA->width);
+    myOutput->put(0, imgA->height * imgA->width, false);
+
     myOutput = myOutB.getBuffer(odata, olength);
     memcpy(odata, imgB->imageData, imgB->height * imgB->width);
     myOutput->put(0, imgB->height * imgB->width, false);
-    */
 
     myOutput = myOutBdx.getBuffer(odata, olength);
     memcpy(odata, imgB->imageData, imgB->height * imgB->width);
@@ -502,22 +488,19 @@ int main ( int argc, char* argv [ ] )
     std::cout << "My output buffer is size " << olength << std::endl;
 
     // Call dispatch so the worker can "act" on its input data
-    for( int i = 0; i < 4; i++ ) {
-      printf(">>> DISPATCHING: %d\n", i);
-      std::for_each ( interfaces.begin(), interfaces.end(), Demo::dispatch );
-    }
 
     // Get input data
     OCPI::Container::ExternalBuffer* myInput;
 
-    /*
-    myInput = myInFeature.getBuffer(opcode, idata, ilength, isEndOfData);
+    myInput = NULL;
+    while((myInput = myInFeatureA.getBuffer(opcode, idata, ilength, isEndOfData)) == NULL) {
+      std::for_each ( interfaces.begin(), interfaces.end(), Demo::dispatch );
+    }
     size_t ncorners = ilength / (2 * sizeof(float));
     float *cornersA = (float *) malloc(ncorners * 2 * sizeof(float));
     memcpy(cornersA, idata, ilength);
-    myInput->release();
+    // myInput->release();
     std::cout << "My old corners " << ncorners << std::endl;
-    */
 
     /*
     // Test features
@@ -527,6 +510,7 @@ int main ( int argc, char* argv [ ] )
     }
     */
 
+    /*
     // Test gradients
     myInput = myInAd2x.getBuffer(opcode, idata, ilength, isEndOfData);
     std::cout << "My size: " << ilength << ", H*W: "
@@ -534,25 +518,36 @@ int main ( int argc, char* argv [ ] )
               << imgB->height*imgB->width << std::endl;
     myInput->release();
     memcpy(imgC->imageData, idata, ilength);
+    */
 
     // Get corners, statuses, errors
-    /*
-    myInput = myIn.getBuffer(opcode, idata, ilength, isEndOfData);
+    myInput = NULL;
+    while((myInput = myIn.getBuffer(opcode, idata, ilength, isEndOfData)) == NULL) {
+      std::for_each ( interfaces.begin(), interfaces.end(), Demo::dispatch );
+    }
     // size_t ncorners = ilength / (2 * sizeof(float));
     float *cornersB = (float *) malloc(ncorners * 2 * sizeof(float));
     memcpy(cornersB, idata, ilength);
     // myInput->release();
     std::cout << "My corners " << ilength / (2 * sizeof(float)) << std::endl;
 
-    myInput = myInStatus.getBuffer(opcode, idata, ilength, isEndOfData);
+    myInput = NULL;
+    while((myInput = myInStatus.getBuffer(opcode, idata, ilength, isEndOfData)) == NULL) {
+      std::for_each ( interfaces.begin(), interfaces.end(), Demo::dispatch );
+    }
     char *status = (char *) malloc(ncorners * sizeof(char));
     memcpy(status, idata, ilength);
     // myInput->release();
+    std::cout << "My status" << ilength << std::endl;
 
-    myInput = myInErr.getBuffer(opcode, idata, ilength, isEndOfData);
+    myInput = NULL;
+    while((myInput = myInErr.getBuffer(opcode, idata, ilength, isEndOfData)) == NULL) {
+      std::for_each ( interfaces.begin(), interfaces.end(), Demo::dispatch );
+    }
     float *err = (float *) malloc(ncorners * sizeof(float));
     memcpy(err, idata, ilength);
     // myInput->release();
+    std::cout << "My err" << ilength / sizeof(float) << std::endl;
 
     // Draw flow
     for( size_t i = 0; i < ncorners; i++ ) {
@@ -565,6 +560,7 @@ int main ( int argc, char* argv [ ] )
       double x1 = cornersB[2*i];
       double y1 = cornersB[2*i+1];
       CvPoint q = cvPoint( cvRound(x1), cvRound(y1) );
+      printf("%.4lf %.4lf -> %.4lf %.4lf\n", x0, y0, x1, y1);
 
       CvScalar line_color = CV_RGB(255, 0, 0);
       int line_thickness = 1;
@@ -585,7 +581,6 @@ int main ( int argc, char* argv [ ] )
       p.y = (int) (y0 + 5 * hypotenuse * sin(angle - pi / 4));
       cvLine( imgC, p, q, line_color, line_thickness, CV_AA, 0 );
     }
-    */
 
     // Save image
     cvSaveImage("output_image.jpg", imgC);
@@ -612,12 +607,10 @@ int main ( int argc, char* argv [ ] )
     cvDestroyWindow( "Image B" );
     cvDestroyWindow( "Image Flow" );
 
-    /*
     free( cornersA );
     free( cornersB );
     free( status );
     free( err );
-    */
 	}
 	catch ( const std::string& s )
 	{

@@ -183,13 +183,11 @@ int main ( int argc, char* argv [ ] )
     std::cout << "My output buffer is size " << olength << std::endl;
 
     // Call dispatch so the worker can "act" on its input data
-    std::for_each ( interfaces.begin(), interfaces.end(), Demo::dispatch );
-    std::for_each ( interfaces.begin(), interfaces.end(), Demo::dispatch );
-    std::for_each ( interfaces.begin(), interfaces.end(), Demo::dispatch );
-
     // Get input data
-    OCPI::Container::ExternalBuffer* myInput = myIn.getBuffer(opcode, idata,
-      ilength, isEndOfData);
+    OCPI::Container::ExternalBuffer* myInput = NULL;
+    while((myInput = myIn.getBuffer(opcode, idata, ilength, isEndOfData)) == NULL) {
+      std::for_each ( interfaces.begin(), interfaces.end(), Demo::dispatch );
+    }
 
     std::cout << "My input buffer is size " << ilength << std::endl;
 
