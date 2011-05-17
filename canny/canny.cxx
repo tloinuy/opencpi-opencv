@@ -156,8 +156,6 @@ int main ( int argc, char* argv [ ] )
       &myOutY = syIn.connectExternal("aci_out_dy"),
       &myIn = cOut.connectExternal("aci_in");
 
-    printf(">>> DONE CONNECTING!\n");
-
     /* ---- Start all of the workers ------------------------------------- */
     std::for_each ( facades.rbegin ( ),
         facades.rend ( ),
@@ -168,8 +166,6 @@ int main ( int argc, char* argv [ ] )
     std::for_each ( interfaces.begin(),
         interfaces.end(),
         Demo::dispatch );
-
-    printf(">>> DONE STARTING!\n");
 
     // Output info
     uint8_t *odata;
@@ -185,7 +181,6 @@ int main ( int argc, char* argv [ ] )
     uint8_t *imgLine = (uint8_t *) img->imageData;
 
     for(int i = 0; i < img->height; i++) {
-      printf(">>> ACI sending line: %d\n", i);
       // Set output data
       OCPI::Container::ExternalBuffer* myOutput;
 
@@ -193,13 +188,9 @@ int main ( int argc, char* argv [ ] )
       memcpy(odata, imgLine, img->widthStep);
       myOutput->put(0, img->widthStep, false);
 
-      printf(">>> ACI got X\n");
-
       myOutput = myOutY.getBuffer(odata, olength);
       memcpy(odata, imgLine, img->widthStep);
       myOutput->put(0, img->widthStep, false);
-
-      printf(">>> ACI got Y\n");
 
       imgLine += img->widthStep;
 

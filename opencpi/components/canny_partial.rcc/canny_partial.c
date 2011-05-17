@@ -63,11 +63,6 @@ updateFrame(int H, int W, int lines,
 static void
 cannyInit(int H, int W,
           double low_thresh, double high_thresh) {
-  // debug
-  /*
-  printf("H: %d, W: %d, low_thresh: %.2lf, high_thresh: %.2lf\n",
-          H, W, low_thresh, high_thresh);
-  */
 
   // sanity checks
   if(low_thresh < 1e-9)
@@ -300,15 +295,8 @@ static RCCResult run(RCCWorker *self,
           *out = &self->ports[CANNY_PARTIAL_OUT];
   const RCCContainer *c = self->container;
 
-  /*
-  printf(">>> LINE AT: %d / %d\n", lineAt, p->height);
-  printf(">>> IN_DX: %d, IN_DY: %d, W: %d\n",
-         in_dx->input.length, in_dy->input.length, p->width);
-  */
-
   // Run Canny edge detection
   int lines = in_dx->input.length / p->width;
-  // printf(">>> LINES: %d\n", lines);
   int lineEnd = lineAt + lines;
   updateFrame(p->height, p->width, lines,
               in_dx->current.data, in_dy->current.data);
@@ -316,21 +304,15 @@ static RCCResult run(RCCWorker *self,
   c->advance( in_dx, FRAME_BYTES );
   c->advance( in_dy, FRAME_BYTES );
 
-  // printf(">>> updated frame!\n");
-
   // init
   if(lineAt == 0) {
     cannyInit(p->height, p->width, p->low_thresh, p->high_thresh);
   }
 
-  // printf(">>> done init!\n");
-
   // loop
   while(lineAt < lineEnd) {
     cannyLoop(p->height, p->width, lineAt++);
   }
-
-  // printf(">>> done loop!\n");
 
   // finish
   if(lineAt == p->height - 1) {

@@ -48,12 +48,6 @@ static void
 doFrame(int H, int W, Pixel *srcdata, Pixel *dstdata,
         double low_thresh, double high_thresh) {
 
-  // debug
-  /*
-  printf("H: %d, W: %d, low_thresh: %.2lf, high_thresh: %.2lf\n",
-          H, W, low_thresh, high_thresh);
-  */
-
   // sanity checks
   if(low_thresh < 1e-9)
     low_thresh = 10;

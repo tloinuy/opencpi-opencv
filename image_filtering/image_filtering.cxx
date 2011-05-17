@@ -36,14 +36,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "highgui.h"
 #include "cv.h"
 
-// PValues for worker
-OCPI::Util::PValue out_pvlist[] = {
-	OCPI::Util::PVULong("bufferCount", 2),
-	OCPI::Util::PVString("xferRole", "active"),
-	OCPI::Util::PVULong("bufferSize", 0x4000),
-	OCPI::Util::PVEnd
-};
-
 int main ( int argc, char* argv [ ] )
 {
 	if(argc != 3) {
@@ -70,19 +62,6 @@ int main ( int argc, char* argv [ ] )
 		cvConvertScale(inImg, img);
 		cvNamedWindow( "Input", CV_WINDOW_AUTOSIZE );
 		cvShowImage( "Input", img );
-		/*
-		cvWaitKey(0);
-		return 0;
-		*/
-		/*
-		// Save smaller version
-		IplImage* smallImg = cvCreateImage(
-				cvSize(img->width / 2, img->height / 2),
-				img->depth, img->nChannels
-		);
-		cvResize(img, smallImg);
-		cvSaveImage("boston_small.jpg", smallImg);
-		*/
 
 		// Create an image for the output (grayscale)
 		IplImage* outImg = cvCreateImage(
@@ -90,12 +69,6 @@ int main ( int argc, char* argv [ ] )
 				img->depth, img->nChannels
 		);
 		cvNamedWindow( "Output", CV_WINDOW_AUTOSIZE );
-
-		// Run Canny edge detection
-		/*
-		cvCanny( outImg, outImg, 10, 100, 3 );
-		cvShowImage( "Output", outImg );
-		*/
 
 		/* ---- Create the shared RCC container and application -------------- */
 		OCPI::Container::Interface* rcc_container ( Demo::get_rcc_interface ( ) );
@@ -115,12 +88,6 @@ int main ( int argc, char* argv [ ] )
 				rcc_application,
 				Demo::get_rcc_uri ( worker_name ).c_str ( ),
 				worker_name );
-		/*
-		Demo::WorkerFacade ySobel ( "Sobel (RCC)",
-				rcc_application,
-				Demo::get_rcc_uri ( "sobel" ).c_str ( ),
-				"sobel" );
-		*/
 
 		// Set properties
 		OCPI::Util::PValue worker_pvlist[] = {
@@ -135,32 +102,14 @@ int main ( int argc, char* argv [ ] )
 		worker.set_properties(worker_pvlist);
 		facades.push_back ( &worker );
 
-		/*
-		OCPI::Util::PValue yWorker_pvlist[] = {
-			OCPI::Util::PVULong("height", img->height),
-			OCPI::Util::PVULong("width", img->width),
-			OCPI::Util::PVULong("xderiv", 0),
-			OCPI::Util::PVEnd
-		};
-		ySobel.set_properties(yWorker_pvlist);
-		*/
-		// facades.push_back ( &ySobel );
-
 		// Set ports
 		OCPI::Container::Port
 			&wOut = worker.port("out"),
 			&wIn = worker.port("in");
 
-		// Pass input to xSobel first
-		// Output of xSobel feeds into ySobel
-		// Output of ySobel goes to application
-		// TODO - corner cases (doesn't quite work)
-		// wOut.connect( ySobel.port("in") );
-		// wIn.connect( xSobel.port("out") );
-
 		// Set external ports (need 3 buffers for out)
 		OCPI::Container::ExternalPort
-			&myOut = wIn.connectExternal("aci_out", out_pvlist),
+			&myOut = wIn.connectExternal("aci_out"),
 			&myIn = wOut.connectExternal("aci_in");
 
 		/* ---- Start all of the workers ------------------------------------- */
@@ -193,7 +142,6 @@ int main ( int argc, char* argv [ ] )
 
 			// Set output data
 			OCPI::Container::ExternalBuffer* myOutput = myOut.getBuffer(odata, olength);
-			// printf("odata: %x\n", odata);
 			memcpy(odata, imgLine, img->widthStep);
 			imgLine += img->widthStep;
 			myOutput->put(0, img->widthStep, false);
@@ -216,22 +164,11 @@ int main ( int argc, char* argv [ ] )
 				ilength, isEndOfData);
 
 			std::cout << "My input buffer is size " << ilength << std::endl;
-			std::cout << "The contents of the input buffer is ";
-			if(idata == NULL) {
-				std::cout << "[NULL]";
-			}
-			else {
-				// Sanity check
-				for(int j = 0; j < 10; j++)
-					std::cout << (int) idata[j] << " ";
-			}
-			std::cout << std::endl;
 
 			myInput->release();
 			memcpy(outImgLine, idata, img->widthStep);
 			outImgLine += img->widthStep;
 		}
-		// TODO - last line?
 
 		// Show image
 		cvShowImage( "Output", outImg );

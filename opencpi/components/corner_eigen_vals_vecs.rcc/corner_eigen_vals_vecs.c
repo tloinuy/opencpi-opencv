@@ -39,11 +39,8 @@ RCCDispatch corner_eigen_vals_vecs = {
 
 static void
 calc_corner_eigen_vals_vecs( int H, int W, char *src,
-                     float* cov ) //eigenv) //, int block_size,
-                     // int aperture_size, int op_type, double k=0.,
-                     // int borderType=BORDER_DEFAULT )
+                     float* cov )
 {
-    // block_size = 3, aperture_size = 3, pixel depth 8U
     double scale = 1.0 / (255.0 * 12); 
 
     int i, j;
@@ -51,7 +48,6 @@ calc_corner_eigen_vals_vecs( int H, int W, char *src,
     // need 32F type
     float *Dx = (float *) malloc(H * W * sizeof(float));
     float *Dy = (float *) malloc(H * W * sizeof(float));
-    // smooth?
 
     for( i = 1; i < H - 1; i++ ) {
       uint8_t *l0 = (uint8_t *) (src + (i-1)*W);
@@ -73,12 +69,6 @@ calc_corner_eigen_vals_vecs( int H, int W, char *src,
       Dx[j] = Dy[j] = 0;
       Dx[(H-1)*W+j] = Dy[(H-1)*W+j] = 0;
     }
-
-    // Size size = src.size();
-    // Size size = cvSize( W, H );
-    // Mat cov( size, CV_32FC3 );
-    
-    // float *cov = (float *) malloc(H * W * 3 * sizeof(float));
 
     for( i = 0; i < H; i++ )
     {
@@ -131,12 +121,6 @@ calc_corner_eigen_vals_vecs( int H, int W, char *src,
     // cleanup
     free( cov_tmp );
 
-/*
-    calcMinEigenVal( H, W, cov, eigenv );
-
-    // cleanup
-    free( cov );
-*/
 }
 
 

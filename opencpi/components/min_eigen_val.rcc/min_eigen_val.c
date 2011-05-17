@@ -42,12 +42,9 @@ static void
 calc_min_eigen_val( int H, int W, const float* _cov, float* _dst )
 {
     int i, j;
-    // Size size = _cov.size();
 
     for( i = 0; i < H; i++ )
     {
-        // const float* cov = (const float*)(_cov.data + _cov.step*i);
-        // float* dst = (float*)(_dst.data + _dst.step*i);
         const float* cov = (const float*) (_cov + i*W*3);
         float* dst = (float*) (_dst + i*W);
         for( j = 0; j < W; j++ )

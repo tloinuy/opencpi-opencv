@@ -51,66 +51,10 @@ int greaterThanFloatPtr(const void *a, const void *b) {
   return 0;
 }
 
-/*
-// very basic vector classes
-struct fpvector {
-  size_t cursize, maxsize;
-  float **data;
-} tmpCorners;
-
-void fpvector_init() {
-  cursize = 0;
-  maxsize = 16;
-  data = (float **) malloc(maxsize * sizeof(float *));
-}
-
-void tmpCorners_push_back(float *a) {
-  if(tmpCorners.cursize == tmpCorners.maxsize) {
-    tmpCorners.maxsize *= 2;
-    tmpCorners.data = (float **) realloc(
-              tmpCorners.data, tmpCorners.maxsize * sizeof(float *));
-  }
-  tmpCorners.data[tmpCorners.cursize++] = a;
-}
-
-  float* operator[](const int i) const { return data[i]; }
-
-  size_t size() { return cursize; }
-};
-
-struct point {
-  float x, y;
-  point(float x0, float y0) { x = x0; y = y0; }
-};
-
-struct ptvector {
-  size_t cursize, maxsize;
-  struct point *data;
-
-  ptvector() {
-    cursize = 0;
-    maxsize = 8;
-    data = (struct point *) malloc(maxsize * sizeof(struct point));
-  }
-  void push_back(struct point a) {
-    if(cursize == maxsize) {
-      maxsize *= 2;
-      data = (struct point *) realloc(data, maxsize * sizeof(struct point));
-    }
-    data[cursize++] = a;
-  }
-  struct point operator[](const int i) const { return data[i]; }
-  size_t size() { return cursize; }
-};
-*/
-
 // main loop
 static size_t calc_features(int H, int W, float *src, float *dst,
             int maxCorners, double qualityLevel, double minDistance)
 {
-  // int H = image->height;
-  // int W = image->width;
-  // char *src = image->imageData;
 
   // int maxCorners = 100;
   if(maxCorners < 0)
@@ -121,11 +65,7 @@ static size_t calc_features(int H, int W, float *src, float *dst,
   // double minDistance = 7.0;
   if(minDistance < 0)
     minDistance = 7.0;
-  // Mat mask;
-  // int blockSize = 3;
 
-  // Mat eig, tmp;
-  // float *eig = (float *) malloc(H * W * sizeof(float));
   float *eig = src;
   float *tmp = (float *) malloc(H * W * sizeof(float));
   // test_cornerMinEigenVal( H, W, src, eig); //, blockSize, 3, BORDER_DEFAULT );
@@ -145,10 +85,9 @@ static size_t calc_features(int H, int W, float *src, float *dst,
   // threshold( eig, eig, maxVal*qualityLevel, 0, THRESH_TOZERO );
   for( y = 0; y < H; y++ ) {
     for( x = 0; x < W; x++ ) {
-      float val = eig[y*W+x]; // eig.at<float>(y, x);
+      float val = eig[y*W+x];
       if(val < threshold)
         eig[y*W+x] = 0;
-        // eig.at<float>(y, x) = 0;
     }
   }
 
@@ -180,18 +119,14 @@ static size_t calc_features(int H, int W, float *src, float *dst,
   // collect list of pointers to features - put them into temporary image
   for( y = 1; y < H - 1; y++ )
   {
-    // float* eig_data = (float*)eig.ptr(y);
-    // const float* tmp_data = (const float*)tmp.ptr(y);
     float* eig_data = eig + y*W;
     const float* tmp_data = (const float*) (tmp + y*W);
-    // const uchar* mask_data = mask.data ? mask.ptr(y) : 0;
 
     for( x = 1; x < W - 1; x++ )
     {
       float val = eig_data[x];
-      if( val != 0 && val == tmp_data[x]) // && (!mask_data || mask_data[x]) )
+      if( val != 0 && val == tmp_data[x])
         tmpCorners[tmpCornersSize++] = eig_data + x;
-        // tmpCorners.push_back(eig_data + x);
     }
   }
 
@@ -205,7 +140,6 @@ static size_t calc_features(int H, int W, float *src, float *dst,
   const int grid_width = (W + cell_size - 1) / cell_size;
   const int grid_height = (H + cell_size - 1) / cell_size;
 
-  // struct ptvector grid[grid_width * grid_height];
   float *gridx = malloc(H * W * sizeof(float));
   float *gridy = malloc(H * W * sizeof(float));
   int *gridSize = malloc(grid_height * grid_width * sizeof(int));
@@ -216,11 +150,6 @@ static size_t calc_features(int H, int W, float *src, float *dst,
 
   for( i = 0; i < total; i++ )
   {
-    /*
-    int ofs = (int)((const uchar*)tmpCorners[i] - eig.data);
-    int y = (int)(ofs / eig.step);
-    int x = (int)((ofs - y*eig.step)/sizeof(float));
-    */
     int ofs = (int)(tmpCorners[i] - eig);
     y = (int)(ofs / W);
     x = (int)(ofs - y*W);
@@ -248,15 +177,13 @@ static size_t calc_features(int H, int W, float *src, float *dst,
       for( xx = x1; xx <= x2; xx++ )
       {   
         int ind = yy*grid_width + xx;
-        // ptvector &m = grid[yy*grid_width + xx];
 
-        // if( m.size() )
         if( gridSize[ind] )
         {
           for(j = 0; j < gridSize[ind]; j++)
           {
-            float dx = x - gridx[ind*hw + j];//m[j].x;
-            float dy = y - gridy[ind*hw + j];//m[j].y;
+            float dx = x - gridx[ind*hw + j];
+            float dy = y - gridy[ind*hw + j];
 
             if( dx*dx + dy*dy < minDistance )
             {
@@ -272,15 +199,12 @@ break_out:
 
     if(good)
     {
-      // printf("%d: %d %d -> %d %d, %d, %d -- %d %d %d %d, %d %d, c=%d\n",
-      //    i,x, y, x_cell, y_cell, (int)minDistance, cell_size,x1,y1,x2,y2, grid_width,grid_height,c);
-      // grid[y_cell*grid_width + x_cell].push_back(point((float)x, (float)y));
       int ind = y_cell*grid_width + x_cell;
       gridx[ind*hw + gridSize[ind]] = (float) x;
       gridy[ind*hw + gridSize[ind]] = (float) y;
       gridSize[ind]++;
 
-      dst[2*ncorners] = x; //Point2f((float)x, (float)y);
+      dst[2*ncorners] = x;
       dst[2*ncorners+1] = y;
       ncorners++;
 
@@ -290,7 +214,6 @@ break_out:
   }
 
   // cleanup
-  // free( eig );
   free( tmp );
   free( gridx );
   free( gridy );
