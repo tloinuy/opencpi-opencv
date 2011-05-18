@@ -777,7 +777,7 @@ void calcOpticalFlowAndMark(IplImage *imgA, IplImage *imgB, IplImage *imgC) {
     //cvSize( win_size, win_size ),
     //0 // levels
   );
-/*
+  /*
   cv::test_calcOpticalFlowPyrLK(
     imgA,
     imgB,
@@ -786,10 +786,10 @@ void calcOpticalFlowAndMark(IplImage *imgA, IplImage *imgB, IplImage *imgC) {
     status,
     err,
     cvSize( win_size, win_size ),
-    0, // levels
+    3, // levels
     cvTermCriteria( CV_TERMCRIT_ITER | CV_TERMCRIT_EPS, 20, .3 )
   );
-*/
+  */
 
   for( int i = 0; i < corner_count; i++ )
     cornersB[i].x = nextPts[i].x, cornersB[i].y = nextPts[i].y;
@@ -873,6 +873,10 @@ int main( int argc, char** argv ) {
   cvShowImage( "Image A", imgA );
   cvShowImage( "Image B", imgB );
   cvShowImage( "Image Flow", imgC );
+
+  cvSaveImage( "lk_pyr_outA.jpg", imgA );
+  cvSaveImage( "lk_pyr_outC.jpg", imgC );
+
 
   // cleanup
   cvWaitKey(0);
