@@ -1,0 +1,68 @@
+
+********* BACKGROUND *********
+
+This project is part of my M.Eng. thesis at MIT.
+
+The goal of the proposed project is to port a subset of the OpenCV software components to the OpenCPI framework. Open Source Computer Vision (OpenCV) is a widely used library of over 500 optimized software components for real-time computer vision. The Open Component Portability Infrastructure (OpenCPI) is a real-time embedded (RTE) middleware solution that simplifies programming of heterogeneous processing applications requiring a mix of processing technologies. These include central processing units (CPU), graphics processing units (GPU), field-programmable gate arrays (FPGA), general-purpose processors (GPP), digital signal processors (DSP), and high-speed switch fabrics. 
+
+
+********* OVERVIEW ***********
+
+The RCC workers in the library (under /opencpi/components/):
+- blur
+- canny
+- canny_partial
+- corner_eigen_vals_vecs
+- dilate
+- erode
+- gaussian_blur
+- good_features_to_track
+- laplace
+- median
+- min_eigen_val
+- optical_flow_pyr_lk
+- scharr
+- sobel
+- sobel_32f
+
+The demo applications (in their respective folders):
+- image_filtering (gradients, smoothing, etc)
+- canny (edge detection)
+- feature_detection (finds strong corners)
+- optical_flow (using the Lucas-Kanade pyramidal method; in progress)
+
+More details can be found in my thesis, available at:
+
+http://web.mit.edu/tonyliu/www/opencpi/thesis-final-5-18-11.pdf
+
+The OpenCPI documentation is located at:
+
+http://www.opencpi.org/documentation.php
+
+
+********* LICENSE ************
+
+The computer-vision portions of this project are under the GNU GPL v2.
+
+=====
+Copyright (C) 2011 Massachusetts Institute of Technology
+
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+======
+
+For all other files, please see the text in /opencpi/ for details on the OpenCPI license.
+
+
